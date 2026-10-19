@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Better Workspace File Manager",
-    "description": "Adds file management to the Files tab: an upload button and drag-and-drop upload from your computer, multi-select (click, Shift, ⌘/Ctrl, drag box), a right-click menu to download as a file or ZIP, create folders, and delete with confirmation, dragging items onto a folder to move them, and dragging workspace files into a conversation as @path references or image attachments."
+    "description": "Adds file management to the Files tab and file previews: upload by button or drag-and-drop, multi-select, a right-click menu to download, create folders and delete, drag-to-move, drag workspace files into a conversation, a Download option in every file preview, and in-place editing of text files with a Save button or 5-second auto-save."
   }
 }

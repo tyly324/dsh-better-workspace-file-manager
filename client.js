@@ -120,7 +120,35 @@ window.__ModuleLoader__.load({
       'error.expired': 'the download link expired',
       'error.exists': 'a file or folder with that name already exists',
       'error.into-itself': 'a folder can’t be moved into itself',
+      'error.not-text': 'it isn’t a UTF-8 text file',
+      'error.too-large': 'the file is too large to edit',
+      'error.stale': 'the file changed on disk',
       'error.unknown': 'unknown error',
+      'edit.start': 'Edit',
+      'edit.done': 'Done',
+      'edit.save': 'Save',
+      'edit.saving': 'Saving…',
+      'edit.saved': 'Saved',
+      'edit.unsaved': 'Unsaved changes',
+      'edit.autoSaved': 'Auto-save on',
+      'edit.loading': 'Opening for editing…',
+      'edit.loadFailed': 'Couldn’t open for editing: {reason}',
+      'edit.saveFailed': 'Couldn’t save: {reason}',
+      'edit.conflict': 'This file changed on disk since you started editing.',
+      'edit.reload': 'Discard my edits',
+      'edit.overwrite': 'Keep my version',
+      'edit.closeTitle': 'Save changes to “{name}”?',
+      'edit.closeDesc': 'Your edits will be lost if you don’t save them.',
+      'edit.closeSave': 'Save',
+      'edit.closeDiscard': 'Don’t save',
+      'edit.label': 'Contents of {name}',
+      'settings.title': 'Text editing',
+      'settings.autoSave': 'Auto-save',
+      'settings.autoSaveDesc': 'Save edited text files automatically every 5 seconds. When off, save with the Save button.',
+      'settings.summaryManual': 'Text files save with the Save button',
+      'settings.summaryAuto': 'Text files auto-save every 5 seconds',
+      'settings.failed': 'The setting wasn’t saved. Try again.',
+      'settings.unavailable': 'Settings are unavailable until the plugin finishes loading.',
     };
     const zh = {
       'upload.label': '上传文件',
@@ -175,7 +203,35 @@ window.__ModuleLoader__.load({
       'error.expired': '下载链接已过期',
       'error.exists': '已存在同名的文件或文件夹',
       'error.into-itself': '文件夹不能移动到其自身中',
+      'error.not-text': '它不是 UTF-8 文本文件',
+      'error.too-large': '文件太大，无法编辑',
+      'error.stale': '文件已在磁盘上被修改',
       'error.unknown': '未知错误',
+      'edit.start': '编辑',
+      'edit.done': '完成',
+      'edit.save': '保存',
+      'edit.saving': '正在保存…',
+      'edit.saved': '已保存',
+      'edit.unsaved': '有未保存的修改',
+      'edit.autoSaved': '自动保存已开启',
+      'edit.loading': '正在打开以编辑…',
+      'edit.loadFailed': '无法打开以编辑：{reason}',
+      'edit.saveFailed': '无法保存：{reason}',
+      'edit.conflict': '你开始编辑后，此文件已在磁盘上被修改。',
+      'edit.reload': '放弃我的修改',
+      'edit.overwrite': '保留我的版本',
+      'edit.closeTitle': '保存对“{name}”的修改？',
+      'edit.closeDesc': '如果不保存，你的修改将会丢失。',
+      'edit.closeSave': '保存',
+      'edit.closeDiscard': '不保存',
+      'edit.label': '{name} 的内容',
+      'settings.title': '文本编辑',
+      'settings.autoSave': '自动保存',
+      'settings.autoSaveDesc': '每 5 秒自动保存编辑中的文本文件。关闭时，使用“保存”按钮保存。',
+      'settings.summaryManual': '文本文件通过“保存”按钮保存',
+      'settings.summaryAuto': '文本文件每 5 秒自动保存',
+      'settings.failed': '设置未能保存，请重试。',
+      'settings.unavailable': '插件加载完成后才能修改设置。',
     };
 
     const css = `
@@ -203,6 +259,32 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
 .bwfm-status{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}
 .bwfm-names{margin:0;padding:0 0 0 18px;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:20px;word-break:break-all}
 .bwfm-danger:not(:disabled){color:var(--dsw-alias-state-error-primary)}
+/* Preview opening control: the shipped open-in-app split button's look, under this plugin's prefix. */
+.bwfm-ot-anchor{flex:none;align-self:center;display:inline-flex}
+.bwfm-ot-split{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-sm);height:24px;font-family:var(--dsw-font-family);align-items:stretch;display:inline-flex;overflow:hidden}
+.bwfm-ot-main,.bwfm-ot-chevron{color:var(--dsw-alias-label-primary);white-space:nowrap;cursor:pointer;background:0 0;border:0;justify-content:center;align-items:center;font-size:11px;line-height:16px;display:inline-flex}
+.bwfm-ot-main{gap:4px;padding:3px 5px}
+.bwfm-ot-chevron{border-left:.5px solid var(--dsw-alias-border-l4);color:var(--dsw-alias-label-secondary);padding:3px 4px 3px 3px}
+.bwfm-ot-main:hover:not(:disabled),.bwfm-ot-main:focus-visible,.bwfm-ot-chevron:hover:not(:disabled),.bwfm-ot-chevron:focus-visible{background:var(--dsw-alias-interactive-bg-hover)}
+.bwfm-ot-main:disabled,.bwfm-ot-chevron:disabled{cursor:default}
+.bwfm-ot-icon{object-fit:contain}
+.bwfm-ot-split[data-size=large]{border-radius:var(--dsw-radius-md);border-color:var(--dsw-alias-border-l2);height:36px}
+.bwfm-ot-split[data-size=large] .bwfm-ot-main{gap:6px;padding:6px 14px;font-size:14px}
+.bwfm-ot-split[data-size=large] .bwfm-ot-chevron{padding:6px 10px}
+/* Text editor: fills the preview body, which is the positioned scroll container. */
+.bwfm-editor{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;min-height:0;background:var(--dsw-alias-bg-layer-1)}
+.bwfm-editor textarea{flex:auto;min-height:0;width:100%;box-sizing:border-box;margin:0;padding:8px 16px;border:0;outline:none;resize:none;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;line-height:inherit;tab-size:4}
+.bwfm-editor textarea:disabled{color:var(--dsw-alias-label-secondary)}
+.bwfm-editor-note{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0;padding:6px 16px;border-bottom:.5px solid var(--dsw-alias-border-l3);font-family:var(--dsw-font-family);font-size:12px;line-height:18px;white-space:normal;color:var(--dsw-alias-label-secondary)}
+.bwfm-editor-note[data-tone=error]{color:var(--dsw-alias-state-error-primary)}
+.bwfm-editor-note button{border:0;background:0 0;padding:0;font:inherit;color:var(--dsw-alias-brand-primary);cursor:pointer}
+.bwfm-edit-status{flex:none;padding:0 4px;color:var(--dsw-alias-label-secondary);font-size:12px;white-space:nowrap}
+.bwfm-edit-save{flex:none;height:24px;padding:0 10px;border:0;border-radius:var(--dsw-radius-sm);background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary-inverted,#fff);font-size:12px;cursor:pointer}
+.bwfm-edit-save:disabled{opacity:.5;cursor:default}
+.bwfm-tool[aria-pressed=true]{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}
+.bwfm-setting{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:16px 0;border-bottom:.5px solid var(--dsw-alias-border-l2)}
+.bwfm-setting-title{font-size:14px;line-height:20px;color:var(--dsw-alias-label-primary)}
+.bwfm-setting-desc{margin-top:4px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary)}
 `;
 
     /** Upload glyph drawn to match the host's 16px Regular download icon. */
@@ -225,6 +307,20 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
     const routeUrl = (endpoint) => new URL(ROUTE + endpoint, document.baseURI).href;
     const quote = (value) => `"${CSS.escape(value)}"`;
     const treeScope = (root) => `${TREE}[data-files-root=${quote(root)}]`;
+    /** A subscribe that never fires, for hooks whose source is absent. */
+    const NO_SUBSCRIBE = () => () => {};
+    /** Shipped file-resource address prefix (`dsh-resource://file/session/<id>/<path>`). */
+    const FILE_ADDRESS_PREFIX = 'dsh-resource://file/session/';
+    /** The session a file-resource address belongs to; previews may show files of another session. */
+    function sessionOfAddress(address) {
+      if (typeof address !== 'string' || !address.startsWith(FILE_ADDRESS_PREFIX)) return undefined;
+      const id = address.slice(FILE_ADDRESS_PREFIX.length).split(/[/?#]/)[0];
+      try {
+        return id === '' ? undefined : decodeURIComponent(id);
+      } catch {
+        return undefined;
+      }
+    }
 
     /**
      * Workspace-relative `@path` mention in the composer's grammar
@@ -299,7 +395,11 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
       /** Call this plugin's Host route; a non-2xx answer throws its localized reason. */
       async function request(endpoint, init) {
         const response = await fetch(routeUrl(endpoint), { method: 'POST', credentials: 'same-origin', ...init });
-        if (!response.ok) throw new Error(reasonOf(await response.json().catch(() => undefined)));
+        if (!response.ok) {
+          const body = await response.json().catch(() => undefined);
+          // `code` keeps the Host's error id, so callers can react to one failure (a stale save) specifically.
+          throw Object.assign(new Error(reasonOf(body)), { code: body?.error });
+        }
         return response;
       }
       /** POST form fields (`[name, value]` pairs, names may repeat) and read the JSON answer. */
@@ -1042,6 +1142,7 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
           }),
           dialog?.kind === 'mkdir' && h(NewFolderDialog, { key: dialog.seq, dialog, tr }),
           dialog?.kind === 'delete' && h(DeleteDialog, { key: dialog.seq, dialog, tr }),
+          dialog?.kind === 'unsaved' && h(UnsavedDialog, { key: dialog.seq, dialog, tr }),
           toast !== null && h(ui.Toast, {
             key: toast.seq,
             text: toast.text,
@@ -1051,6 +1152,434 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
               if (store.getSnapshot().toast?.seq === toast.seq) patch({ toast: null });
             },
           }));
+      }
+
+      // ---- file preview: Download in the opening menu ------------------------
+
+      /** Download one previewed file through the ticket route; failures become a toast. */
+      async function downloadFile(sessionId, path) {
+        try {
+          const { ticket } = await post('file-ticket', [['sessionId', sessionId], ['path', path]]);
+          const anchor = document.createElement('a');
+          anchor.href = routeUrl(`download?${new URLSearchParams({ ticket })}`);
+          anchor.download = '';
+          anchor.click();
+        } catch (error) {
+          notify(t('download.failed', { reason: messageOf(error) }));
+        }
+      }
+
+      /** One application image with a per-image fallback, as the shipped control draws it. */
+      function AppIcon({ source, size = 14 }) {
+        const [failed, setFailed] = React.useState(false);
+        return source === null || source === undefined || failed
+          ? h(ui.IconRightUpOutlineRegular, { size })
+          : h('img', { src: source, width: size, height: size, className: 'bwfm-ot-icon', alt: '', draggable: false, onError: () => setFailed(true) });
+      }
+
+      /**
+       * The preview header's opening control with Download added to its menu.
+       *
+       * The shipped open-in-app control renders a closed menu (its items are
+       * fixed inside its component), so this entry shadows that same cell in
+       * `sidebar.right.tab.document.actions` and redraws the split button.
+       * Applications, opening, and Reveal still go through the shipped
+       * entry's own injected operations (read from the slot registry), so
+       * file associations and launching stay entirely the host's. When that
+       * entry or its operations are missing — no native desktop, or a future
+       * release renamed them — Download still appears, alone.
+       */
+      function PreviewOpenTarget(props) {
+        const tr = props.t ?? t;
+        const shipped = props.openInApp;
+        const desktop = shipped?.hooks?.openInAppDesktop;
+        const available = React.useSyncExternalStore(
+          desktop?.subscribe ?? NO_SUBSCRIBE,
+          () => desktop?.getSnapshot() ?? false,
+        ) === true;
+        const [apps, setApps] = React.useState({ list: [], loading: true, failed: false });
+        const [menuOpen, setMenuOpen] = React.useState(false);
+        const [pending, setPending] = React.useState(false);
+        const openTr = shipped?.t ?? tr;
+        const path = props.absolutePath;
+        // The header seat carries no tab hook; the panel's session is the one whose workspace previews resolve against.
+        const sessionId = props.sessionId;
+
+        React.useEffect(() => {
+          if (desktop !== undefined && desktop.getSnapshot() === null) shipped.loadDesktop?.();
+        }, [desktop]);
+        const refresh = React.useCallback(() => {
+          if (!available || typeof shipped?.applications !== 'function') return undefined;
+          const controller = new AbortController();
+          setApps((value) => ({ ...value, loading: true }));
+          shipped.applications(path, controller.signal).then((list) => {
+            if (!controller.signal.aborted) setApps({ list: list ?? [], loading: false, failed: list === null });
+          });
+          return () => controller.abort();
+        }, [available, path, shipped]);
+        React.useEffect(refresh, [refresh]);
+
+        const open = async (action, application) => {
+          if (pending || typeof shipped?.openPath !== 'function') return;
+          setPending(true);
+          try {
+            const failure = await shipped.openPath(path, action, application);
+            if (failure !== null && failure !== undefined) notify(openTr(`path.${failure}`));
+          } finally {
+            setPending(false);
+          }
+        };
+        const preferred = apps.list.find((app) => app.default) ?? apps.list[0];
+        const revealDefault = preferred === undefined && !apps.loading;
+        const primaryLabel = !available ? tr('menu.download')
+          : preferred === undefined ? openTr('path.reveal') : openTr('open.title', { app: preferred.name });
+        const primary = () => {
+          if (!available) downloadFile(sessionId, path);
+          else if (revealDefault) open('reveal');
+          else open('open');
+        };
+        const icon = !available ? h(ui.IconDownloadOutlineRegular, { size: 13 })
+          : apps.loading && preferred === undefined ? h(ui.IconLoadingOutlineRegular, { size: 13 })
+            : revealDefault ? h(ui.IconFolderOpenOutlineRegular, { size: 13 }) : h(AppIcon, { source: preferred?.icon, size: 13, key: preferred?.icon });
+        const items = available ? [
+          ...apps.list.map((app) => ({
+            id: `app:${app.id}`,
+            icon: h(AppIcon, { source: app.icon, key: app.icon }),
+            label: app.id === preferred?.id ? openTr('path.appDefault', { app: app.name }) : app.name,
+          })),
+          ...(apps.failed ? [{ id: 'unavailable', label: openTr('path.appsError'), disabled: true }] : []),
+        ] : [];
+        const footer = [
+          ...(available ? [{ id: 'reveal', icon: h(ui.IconFolderOpenOutlineRegular, {}), label: openTr('path.reveal') }] : []),
+          { id: 'download', icon: h(ui.IconDownloadOutlineRegular, {}), label: tr('menu.download') },
+        ];
+        const disabled = pending;
+        return h(ui.Menu, {
+          className: 'bwfm-ot-anchor',
+          open: menuOpen && !disabled,
+          autoFocus: true,
+          portal: true,
+          dense: true,
+          align: 'end',
+          onClose: () => setMenuOpen(false),
+          items,
+          footer,
+          onSelect: (id) => {
+            setMenuOpen(false);
+            if (id === 'download') downloadFile(sessionId, path);
+            else if (id === 'reveal') open('reveal');
+            else if (id.startsWith('app:')) open('open', id.slice(4));
+          },
+          anchor: h('div', {
+            className: 'bwfm-ot-split',
+            'data-size': 'compact',
+            'data-open-path': '',
+            'data-state': disabled ? 'busy' : 'idle',
+          },
+          h(ui.Tooltip, { portal: true, label: primaryLabel, side: 'bottom', delayMs: 500 },
+            h('button', { type: 'button', className: 'bwfm-ot-main', disabled, 'aria-label': primaryLabel, 'data-open-path-open': '', onClick: primary }, icon)),
+          h('button', {
+            type: 'button',
+            className: 'bwfm-ot-chevron',
+            disabled,
+            'aria-haspopup': 'menu',
+            'aria-expanded': menuOpen && !disabled,
+            'aria-label': openTr('path.more'),
+            'data-open-path-more': '',
+            onClick: () => {
+              if (!menuOpen) refresh();
+              setMenuOpen((value) => !value);
+            },
+          }, h(ui.IconChevronDownOutlineRegular, { size: 10 }))),
+        });
+      }
+
+      // ---- file preview: text editing ----------------------------------------
+
+      /** Workspace-files text renderers whose previews become editable. */
+      const TEXT_RENDERERS = Object.freeze({
+        text: '@deepseek-ai/dsh-client-ui-sidebar-documentpreview/text',
+        code: '@deepseek-ai/dsh-client-ui-sidebar-documentpreview/code',
+        markdown: '@deepseek-ai/dsh-client-ui-sidebar-documentpreview/markdown',
+      });
+      const DOCUMENT_BODY = 'sidebar.right.tab.document';
+      const DOCUMENT_ACTION = 'sidebar.right.tab.document.action';
+      const DOCUMENT_ACTIONS = 'sidebar.right.tab.document.actions';
+      const OPEN_IN_APP = 'open-in-app';
+      /** This plugin's own components, never mistaken for the shipped entries they shadow. */
+      const ownComponents = new WeakSet([PreviewOpenTarget]);
+      /** The shipped registration in a cell this plugin shadows, looked up when needed. */
+      const shippedEntry = (name, match) => (ctx.slots.entries?.(name) ?? [])
+        .find((entry) => match(entry) && entry.component !== undefined && !ownComponents.has(entry.component));
+      const SETTINGS_ENTRY = 'better-workspace-file-manager';
+      const PACKAGE_NAME = 'dsh-better-workspace-file-manager';
+      const AUTO_SAVE_MS = 5_000;
+      const SAVE_MODE = Object.freeze({ manual: 'manual', auto: 'auto' });
+
+      /** Per open preview tab: editing on/off, the draft, and save state. Keyed by the tab's file address. */
+      const editors = createSnapshotStore({});
+      const useEditor = (address) => React.useSyncExternalStore(editors.subscribe, () => editors.getSnapshot()[address]);
+      const setEditor = (address, next) => {
+        const all = editors.getSnapshot();
+        const current = all[address];
+        const value = next === undefined ? undefined : { ...current, ...next };
+        const copy = { ...all };
+        if (value === undefined) delete copy[address];
+        else copy[address] = value;
+        editors.set(copy);
+      };
+
+      /** The browser's settings form for this plugin's Host row; absent until Settings serves it. */
+      const settingsForm = () => {
+        try {
+          return ctx.get('configForms')?.get(SETTINGS_ENTRY);
+        } catch {
+          return undefined;
+        }
+      };
+      function useSaveMode() {
+        const form = settingsForm();
+        const mode = React.useSyncExternalStore(form?.subscribe?.bind(form) ?? NO_SUBSCRIBE, () => form?.getSnapshot().value?.saveMode);
+        return mode === SAVE_MODE.auto ? SAVE_MODE.auto : SAVE_MODE.manual;
+      }
+
+      const dirtyOf = (state) => state !== undefined && state.draft !== undefined && state.draft !== state.saved;
+
+      /** Load the file's exact text for editing; preview pages are line-split and may be partial. */
+      async function beginEditing(address, sessionId, path) {
+        setEditor(address, { editing: true, phase: 'loading', error: undefined, conflict: false });
+        try {
+          const response = await request(`text?${new URLSearchParams({ sessionId, path })}`, { method: 'GET' });
+          const { text, version } = await response.json();
+          if (editors.getSnapshot()[address]?.editing !== true) return;
+          setEditor(address, { phase: 'ready', draft: text, saved: text, version, sessionId, path });
+        } catch (error) {
+          setEditor(address, { phase: 'failed', error: t('edit.loadFailed', { reason: messageOf(error) }) });
+        }
+      }
+
+      /**
+       * Save the current draft. `force` re-reads the file's current version
+       * first, so "Keep my version" after a conflict overwrites deliberately.
+       * Concurrent calls collapse to one in-flight save; edits made while it
+       * runs stay dirty and are saved by the next call.
+       */
+      async function saveDraft(address, force = false) {
+        const state = editors.getSnapshot()[address];
+        if (state === undefined || state.phase !== 'ready' || state.saving || (!dirtyOf(state) && !force)) return true;
+        const text = state.draft;
+        setEditor(address, { saving: true, error: undefined });
+        try {
+          let { version } = state;
+          if (force) {
+            const latest = await request(`text?${new URLSearchParams({ sessionId: state.sessionId, path: state.path })}`, { method: 'GET' });
+            version = (await latest.json()).version;
+          }
+          const query = new URLSearchParams({ sessionId: state.sessionId, path: state.path, version });
+          const response = await request(`save?${query}`, {
+            headers: { 'content-type': 'text/plain; charset=utf-8' },
+            body: text,
+          });
+          const saved = await response.json();
+          setEditor(address, { saving: false, saved: text, version: saved.version, conflict: false, savedAt: Date.now() });
+          return true;
+        } catch (error) {
+          if (error?.code === 'stale') setEditor(address, { saving: false, conflict: true });
+          else setEditor(address, { saving: false, error: t('edit.saveFailed', { reason: messageOf(error) }) });
+          return false;
+        }
+      }
+
+      /**
+       * Leave editing. No explicit reload: a save changes the file's version,
+       * which the preview's own file watch picks up and re-reads.
+       */
+      function stopEditing(address) {
+        setEditor(address, undefined);
+      }
+
+      /**
+       * Header controls for an editable text preview: Edit/Done, the save
+       * status, and Save (manual mode). Registered under each text renderer's
+       * key in `sidebar.right.tab.document.action`, which the preview renders
+       * before its own reload button.
+       */
+      function EditControls(props) {
+        const tr = props.t ?? t;
+        const { tab } = props.useTabInfo();
+        const address = tab.contentId;
+        const state = useEditor(address);
+        const mode = useSaveMode();
+        const meta = props.useResource(address);
+        const absolutePath = meta.value?.absolutePath;
+        const sessionId = sessionOfAddress(address) ?? props.sessionId;
+        const cwd = props.useSessions((sessions) => sessions.byId[sessionId]?.cwd);
+        // Saves are confined to the workspace on the Host; a preview of an outside file stays read-only.
+        const editable = absolutePath !== undefined && typeof cwd === 'string' && cwd !== ''
+          && within(absolutePath.replace(/\\/g, '/'), cwd.replace(/\\/g, '/'));
+        const editing = state?.editing === true;
+        const dirty = dirtyOf(state);
+
+        // Auto-save: one timer per editor, every 5 s while there are unsaved edits.
+        React.useEffect(() => {
+          if (!editing || mode !== SAVE_MODE.auto) return undefined;
+          const timer = setInterval(() => {
+            const current = editors.getSnapshot()[address];
+            if (dirtyOf(current) && !current.conflict) saveDraft(address);
+          }, AUTO_SAVE_MS);
+          return () => clearInterval(timer);
+        }, [editing, mode, address]);
+        // A closed tab takes its unsaved draft with it only after a last auto-save attempt.
+        React.useEffect(() => () => {
+          if (mode === SAVE_MODE.auto && dirtyOf(editors.getSnapshot()[address])) saveDraft(address);
+        }, [address, mode]);
+
+        if (!editable && !editing) return null;
+        const status = !editing ? null
+          : state.saving ? tr('edit.saving')
+            : dirty ? tr('edit.unsaved')
+              : state.savedAt !== undefined ? tr('edit.saved')
+                : mode === SAVE_MODE.auto ? tr('edit.autoSaved') : null;
+        const done = () => {
+          if (!dirty) return stopEditing(address);
+          if (mode === SAVE_MODE.auto) return saveDraft(address).then((ok) => ok && stopEditing(address));
+          return openDialog({ kind: 'unsaved', address, name: baseName(absolutePath ?? address) });
+        };
+        return h(React.Fragment, null,
+          status !== null && h('span', { className: 'bwfm-edit-status', role: 'status', 'data-bwfm-edit-status': '' }, status),
+          editing && mode === SAVE_MODE.manual && h('button', {
+            type: 'button',
+            className: 'bwfm-edit-save',
+            'data-bwfm-save': '',
+            disabled: !dirty || state.saving || state.phase !== 'ready',
+            onClick: () => saveDraft(address),
+          }, state.saving ? tr('edit.saving') : tr('edit.save')),
+          h(ui.Tooltip, { label: editing ? tr('edit.done') : tr('edit.start'), side: 'bottom', delayMs: 500 },
+            h('button', {
+              type: 'button',
+              className: 'bwfm-tool',
+              'aria-pressed': editing,
+              'aria-label': editing ? tr('edit.done') : tr('edit.start'),
+              'data-bwfm-edit': '',
+              onClick: () => (editing ? done() : beginEditing(address, sessionId, absolutePath)),
+            }, editing ? h(ui.IconCheckOutlineRegular) : h(ui.IconEditOutlineRegular))));
+      }
+
+      /** The textarea that replaces the rendered preview while editing. */
+      function Editor({ address, name, tr }) {
+        const state = useEditor(address);
+        const areaRef = React.useRef(null);
+        React.useEffect(() => {
+          if (state?.phase === 'ready') areaRef.current?.focus();
+        }, [state?.phase]);
+        if (state === undefined) return null;
+        const onKeyDown = (event) => {
+          // ⌘/Ctrl-S saves instead of saving the web page; Tab indents instead of leaving the field.
+          if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 's') {
+            event.preventDefault();
+            saveDraft(address);
+          } else if (event.key === 'Tab' && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            event.preventDefault();
+            const area = event.currentTarget;
+            area.setRangeText('\t', area.selectionStart, area.selectionEnd, 'end');
+            setEditor(address, { draft: area.value });
+          }
+        };
+        return h('div', { className: 'bwfm-editor', 'data-bwfm-editor': '' },
+          state.phase === 'failed' && h('p', { className: 'bwfm-editor-note', 'data-tone': 'error', role: 'alert' }, state.error),
+          state.conflict && h('p', { className: 'bwfm-editor-note', 'data-tone': 'error', role: 'alert' },
+            h('span', null, tr('edit.conflict')),
+            h('button', { type: 'button', onClick: () => beginEditing(address, state.sessionId, state.path) }, tr('edit.reload')),
+            h('button', { type: 'button', onClick: () => saveDraft(address, true) }, tr('edit.overwrite'))),
+          state.error !== undefined && state.phase === 'ready' && h('p', { className: 'bwfm-editor-note', 'data-tone': 'error', role: 'alert' }, state.error),
+          state.phase === 'loading' && h('p', { className: 'bwfm-editor-note', role: 'status' }, tr('edit.loading')),
+          state.phase === 'ready' && h('textarea', {
+            ref: areaRef,
+            value: state.draft,
+            spellCheck: false,
+            autoCapitalize: 'off',
+            autoComplete: 'off',
+            'aria-label': tr('edit.label', { name }),
+            onChange: (event) => setEditor(address, { draft: event.target.value }),
+            onKeyDown,
+          }));
+      }
+
+      /**
+       * Wrap one shipped text renderer: while its tab is being edited the
+       * textarea takes the body, otherwise the shipped renderer draws as
+       * before. The wrapper shadows the renderer's keyed cell and renders the
+       * shipped component itself with the props it received, so preview
+       * features (paging, line navigation, Markdown rendering) are unchanged.
+       */
+      function editableBody(key) {
+        return function EditableBody(props) {
+          const { tab } = props.useTabInfo();
+          const state = useEditor(tab.contentId);
+          const meta = props.useResource(tab.contentId);
+          if (state?.editing === true) {
+            return h(Editor, { address: tab.contentId, name: baseName(meta.value?.absolutePath ?? tab.contentId), tr: t });
+          }
+          // Resolved at render, so it does not matter which plugin registered first.
+          const renderer = shippedEntry(DOCUMENT_BODY, (candidate) => candidate.options.key === key);
+          if (renderer === undefined) return null;
+          const shippedT = renderer.locale === undefined ? undefined : ctx.locale.bind(renderer.locale);
+          return h(renderer.component, shippedT === undefined ? props : { ...props, t: shippedT });
+        };
+      }
+
+      /** Settings page row: the save-mode switch, written through the Settings service. */
+      function SettingsPage(props) {
+        const tr = props.t ?? t;
+        const form = settingsForm();
+        const snapshot = React.useSyncExternalStore(form?.subscribe?.bind(form) ?? NO_SUBSCRIBE, () => form?.getSnapshot());
+        const [busy, setBusy] = React.useState(false);
+        const [failed, setFailed] = React.useState(false);
+        const auto = snapshot?.value?.saveMode === SAVE_MODE.auto;
+        if (props.view === 'summary') return tr(auto ? 'settings.summaryAuto' : 'settings.summaryManual');
+        const ready = snapshot?.status === 'ready' && snapshot.writable;
+        const change = async (next) => {
+          setBusy(true);
+          setFailed(false);
+          try {
+            setFailed(!(await form.set('saveMode', next ? SAVE_MODE.auto : SAVE_MODE.manual)));
+          } catch {
+            setFailed(true);
+          } finally {
+            setBusy(false);
+          }
+        };
+        return h('div', { 'data-bwfm-settings': '' },
+          h('div', { className: 'bwfm-setting' },
+            h('div', null,
+              h('div', { className: 'bwfm-setting-title' }, tr('settings.autoSave')),
+              h('div', { className: 'bwfm-setting-desc' }, tr('settings.autoSaveDesc')),
+              !ready && h('div', { className: 'bwfm-setting-desc' }, tr('settings.unavailable')),
+              failed && h('div', { className: 'bwfm-error', role: 'alert' }, tr('settings.failed'))),
+            h(ui.Switch, { checked: auto, label: tr('settings.autoSave'), disabled: !ready || busy, onChange: change })));
+      }
+
+      /** Close prompt for unsaved edits in manual mode: Save, Don't save, or keep editing. */
+      function UnsavedDialog({ dialog, tr }) {
+        const close = () => patch({ dialog: null });
+        return h(ui.Modal, {
+          open: true,
+          onClose: close,
+          closeLabel: tr('dialog.close'),
+          title: tr('edit.closeTitle', { name: dialog.name }),
+          description: tr('edit.closeDesc'),
+          footer: h(React.Fragment, null,
+            h(ui.Button, { variant: 'outline', onClick: close }, tr('dialog.cancel')),
+            h(ui.Button, { variant: 'outline', className: 'bwfm-danger', onClick: () => { close(); stopEditing(dialog.address); } }, tr('edit.closeDiscard')),
+            h(ui.Button, {
+              variant: 'primary',
+              'data-modal-autofocus': true,
+              onClick: async () => {
+                close();
+                if (await saveDraft(dialog.address)) stopEditing(dialog.address);
+              },
+            }, tr('edit.closeSave'))),
+        });
       }
 
       // ---- registrations ---------------------------------------------------
@@ -1095,6 +1624,48 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
       for (const [name, id, order, component] of slots) {
         ctx.slots.inject(name, () => ctx.slots.register({ name, id, order, locale: NS }, component));
       }
+
+      // Preview opening control: shadow the shipped `open-in-app` cell (a lower
+      // priority renders) and borrow that entry's injected operations.
+      ctx.slots.inject(DOCUMENT_ACTIONS, () => ctx.slots.register({
+        name: DOCUMENT_ACTIONS,
+        id: OPEN_IN_APP,
+        priority: -1,
+        locale: NS,
+        inject: () => {
+          const entry = shippedEntry(DOCUMENT_ACTIONS, (candidate) => candidate.options.id === OPEN_IN_APP);
+          let face;
+          try {
+            face = entry?.inject?.();
+          } catch {
+            face = undefined;
+          }
+          const shippedT = entry?.locale === undefined ? undefined : ctx.locale.bind(entry.locale);
+          return { openInApp: face === undefined ? undefined : { ...face, t: shippedT } };
+        },
+      }, PreviewOpenTarget));
+
+      // Editable text previews: Edit/Save controls in each text renderer's
+      // header cell, and a body wrapper that swaps in the editor while editing.
+      // The shipped text, code and Markdown bodies take no injected props, so
+      // the wrapper can render them with exactly the props it receives.
+      for (const key of Object.values(TEXT_RENDERERS)) {
+        ctx.slots.inject(DOCUMENT_ACTION, () => ctx.slots.register({ name: DOCUMENT_ACTION, key, locale: NS }, EditControls));
+        const Body = editableBody(key);
+        ownComponents.add(Body);
+        ctx.slots.inject(DOCUMENT_BODY, () => ctx.slots.register({ name: DOCUMENT_BODY, key, priority: -1 }, Body));
+      }
+
+      // Plugin settings page, shown while the Host serves this row's settings form.
+      ctx.effect(() => {
+        const forms = ctx.get('configForms');
+        const register = () => ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
+          name: 'plugins.bundle.config',
+          key: PACKAGE_NAME,
+          locale: NS,
+        }, SettingsPage));
+        return typeof forms?.whileServed === 'function' ? forms.whileServed([SETTINGS_ENTRY], register) : register();
+      }, 'better-workspace-files: settings page');
     }
 
     return { inject: ['slots', 'locale'], apply };

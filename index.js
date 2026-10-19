@@ -16,6 +16,19 @@
  *   download selection and answers `{ ticket }`.
  * - `GET …/download?ticket` streams that selection: one regular file as-is, or
  *   a ZIP of several items or any directory.
+ * - `GET …/text?sessionId&path` answers `{ text, version }`: one workspace
+ *   text file's exact contents (line endings and any BOM kept) for the editor.
+ *   The version is read before the text, so a write landing in between makes
+ *   the next save fail as `stale` rather than silently overwrite it.
+ * - `POST …/save?sessionId&path&version` replaces one existing text file in
+ *   the workspace with the UTF-8 request body, only while its version still
+ *   equals `version` (the one the editor loaded), so a change made meanwhile
+ *   by the agent or another editor is reported as `stale` instead of being
+ *   overwritten. Answers `{ version }`, the new version to guard the next save.
+ *
+ * `Config.saveMode` (`manual` | `auto`) is a volatile field: the plugin's
+ * settings page edits it through the Settings service and the browser reads
+ * it from the same form, so the Host only declares it.
  *
  * The ticket split exists because the browser's download manager can only
  * follow a plain GET (the same anchor-click route the shipped session-log
@@ -40,10 +53,25 @@ import { basename, dirname, extname, join, resolve as resolvePath, sep } from 'n
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import zlib from 'node:zlib';
+import z from '@deepseek-ai/schemastery';
 
 export const inject = ['connection', 'fs', 'sessions'];
 
+/** How the text editor saves; the browser owns the timing, the Host only stores the choice. */
+export const SAVE_MODE = Object.freeze({ manual: 'manual', auto: 'auto' });
+
+export const Config = z.object({
+  saveMode: z.union([z.const(SAVE_MODE.manual), z.const(SAVE_MODE.auto)]).default(SAVE_MODE.manual)
+    .description('How edited text files are saved: with the Save button, or automatically every 5 seconds.').volatile(),
+});
+
 const ROUTE_PREFIX = '/api/better-workspace-files';
+/**
+ * Largest file the editor loads whole. Matches the shipped `workspaceFiles`
+ * complete-file read cap (`maxFileBytes`, 32 MiB), the largest file the
+ * preview itself ever holds in one piece.
+ */
+const MAX_EDIT_BYTES = 32 * 1024 * 1024;
 /** Long enough for the browser to follow the link; a ticket stays reusable until then (download managers may retry). */
 const TICKET_TTL_MS = 60_000;
 
@@ -66,7 +94,10 @@ export function apply(ctx) {
     ['move', 'POST', 'buffered', (request) => files.move(request)],
     ['delete', 'POST', 'buffered', (request) => files.remove(request)],
     ['selection', 'POST', 'buffered', (request) => files.prepare(request)],
+    ['file-ticket', 'POST', 'buffered', (request) => files.prepareFile(request)],
     ['download', 'GET', 'buffered', (request) => files.download(request)],
+    ['text', 'GET', 'buffered', (request) => files.text(request)],
+    ['save', 'POST', 'buffered', (request) => files.save(request)],
   ];
   for (const [endpoint, method, requestBody, handle] of routes) {
     const path = `${ROUTE_PREFIX}/${endpoint}`;
@@ -99,6 +130,10 @@ function classify(error) {
   if (code === 'EACCES' || code === 'EPERM') return { status: 403, code: 'permission' };
   if (code === 'EEXIST' || code === 'ENOTEMPTY') return { status: 409, code: 'exists' };
   if (code === 'ENAMETOOLONG') return { status: 400, code: 'invalid-name' };
+  if (code === 'FS_STALE_VERSION') return { status: 409, code: 'stale' };
+  if (code === 'FS_NOT_TEXT' || code === 'FS_NOT_REGULAR_FILE') return { status: 400, code: 'not-text' };
+  if (code === 'FS_TOO_LARGE') return { status: 413, code: 'too-large' };
+  if (code === 'FS_SANDBOX_DENIED' || code === 'FS_PERMISSION_DENIED') return { status: 403, code: 'permission' };
   return { status: 500, code: 'io' };
 }
 
@@ -240,6 +275,52 @@ class WorkspaceFiles {
     return Response.json({ moved });
   }
 
+  /** The regular workspace file a text request (`sessionId`, `path`) names. */
+  async textFile(query, workspace) {
+    const file = await this.locate(workspace ?? await this.workspace(query.get('sessionId')), query.get('path'));
+    if (file.type !== 'file') throw new HttpError(400, 'not-text');
+    return file;
+  }
+
+  /** One workspace text file's exact contents and the version they were read at. */
+  async text(request) {
+    const file = await this.textFile(new URL(request.url).searchParams);
+    const info = await this.ctx.fs.stat(file.target, request.signal);
+    if (info === undefined) throw new HttpError(404, 'not-found');
+    if ((info.size ?? 0) > MAX_EDIT_BYTES) throw new HttpError(413, 'too-large');
+    const text = await this.ctx.fs.readText(file.target, request.signal);
+    return Response.json({ text, version: info.version }, { headers: { 'cache-control': 'no-store' } });
+  }
+
+  /**
+   * Replace one existing text file with the request body. Goes through
+   * `ctx.fs.writeText` rather than `node:fs`, so the write is atomic, keeps
+   * the file's permissions, and is version-guarded by the filesystem itself:
+   * a file changed since the editor read it fails as `stale`, nothing is
+   * written. Only files the workspace contains are writable here, even when
+   * the preview could open a file outside it.
+   */
+  async save(request) {
+    const query = new URL(request.url).searchParams;
+    const workspace = await this.workspace(query.get('sessionId'));
+    const file = await this.textFile(query, workspace);
+    const version = query.get('version');
+    if (typeof version !== 'string' || version === '') throw new HttpError(400, 'bad-request');
+    const text = new TextDecoder('utf-8', { fatal: true });
+    let content;
+    try {
+      content = text.decode(await request.arrayBuffer());
+    } catch {
+      throw new HttpError(400, 'not-text');
+    }
+    const head = await this.ctx.fs.readByteRange(file.target, { offset: 0, length: STYLE_SAMPLE_BYTES }, request.signal);
+    // The editor's own sandbox root is this Session's workspace: the path is already confined to it,
+    // and without an explicit policy fs-sandbox would fence by the deployment's default root instead.
+    const policy = { mode: 'workspace-write', workspaceRoot: workspace.root, sessionId: query.get('sessionId') };
+    const outcome = await this.ctx.fs.writeText(file.target, matchFileStyle(content, head), { kind: 'replaceIfVersion', version }, request.signal, policy);
+    return Response.json({ version: outcome.version }, { headers: { 'cache-control': 'no-store' } });
+  }
+
   /** Permanently remove entries; folders go with everything inside them. */
   async remove(request) {
     const form = await request.formData();
@@ -269,16 +350,48 @@ class WorkspaceFiles {
     const sessionId = form.get('sessionId');
     const paths = form.getAll('path');
     await this.selection(sessionId, paths);
+    return this.issue({ sessionId, paths });
+  }
+
+  /**
+   * Ticket for one previewed file. Unlike a tree selection this is not
+   * confined to the workspace: it carries exactly the read authority the
+   * document preview already used to show the file (`workspaceFiles` reads
+   * through `ctx.fs` without containment), so any file the preview can show
+   * can also be downloaded. Only regular files qualify.
+   */
+  async prepareFile(request) {
+    const form = await request.formData();
+    const sessionId = form.get('sessionId');
+    const file = form.get('path');
+    await this.readable(sessionId, file);
+    return this.issue({ sessionId, file });
+  }
+
+  /** A regular file readable through the Session's filesystem, resolved from its workspace. */
+  async readable(sessionId, path) {
+    const workspace = await this.workspace(sessionId);
+    if (typeof path !== 'string' || path === '') throw new HttpError(400, 'bad-request');
+    const target = await this.ctx.fs.resolve(path, { cwd: workspace.root });
+    const info = await this.ctx.fs.stat(target);
+    if (info === undefined) throw new HttpError(404, 'not-found');
+    if (info.type !== 'file') throw new HttpError(400, 'unsupported');
+    return this.ctx.fs.processPath(target);
+  }
+
+  /** Hold a validated download request behind a short-lived ticket. */
+  issue(held) {
     const ticket = randomUUID();
     const timer = setTimeout(() => this.tickets.delete(ticket), TICKET_TTL_MS);
     timer.unref?.();
-    this.tickets.set(ticket, { sessionId, paths, timer });
+    this.tickets.set(ticket, { ...held, timer });
     return Response.json({ ticket }, { headers: { 'cache-control': 'no-store' } });
   }
 
   async download(request) {
     const held = this.tickets.get(new URL(request.url).searchParams.get('ticket'));
     if (held === undefined) throw new HttpError(410, 'expired');
+    if (held.file !== undefined) return fileResponse(await this.readable(held.sessionId, held.file), request.signal);
     // Re-validated here: the tree may have changed since the ticket was issued.
     const { workspace, tops } = await this.selection(held.sessionId, held.paths);
     if (tops.length === 1 && tops[0].type === 'file') return fileResponse(tops[0].path, request.signal);
@@ -316,6 +429,30 @@ class WorkspaceFiles {
       yield* this.walk(workspace, child.target, `${name}/${child.name}`);
     }
   }
+}
+
+/** Bytes sampled from a file's start to detect its line-ending style, as fs-local's own edit does. */
+const STYLE_SAMPLE_BYTES = 4096;
+const UTF8_BOM = '\uFEFF';
+
+/**
+ * Give edited text the file's existing conventions. A browser text area
+ * reports every line break as LF and the editor never sees a byte-order mark
+ * (decoding drops it), so saving as-is would silently convert a CRLF file or
+ * strip its BOM. The file's majority style in its first bytes wins, matching
+ * how fs-local preserves line endings for the agent's own edits.
+ * @param content - edited text from the browser.
+ * @param head - the file's first bytes before this save.
+ * @returns the text in the file's line-ending style, with a BOM when the file had one.
+ */
+function matchFileStyle(content, head) {
+  const sample = new TextDecoder('utf-8').decode(head);
+  const crlf = sample.split('\r\n').length - 1;
+  const lf = sample.split('\n').length - 1 - crlf;
+  let text = content.replaceAll('\r\n', '\n');
+  if (crlf > lf) text = text.replaceAll('\n', '\r\n');
+  const bom = head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf;
+  return bom && !text.startsWith(UTF8_BOM) ? UTF8_BOM + text : text;
 }
 
 /** Reject anything but a plain entry name, so a new entry can only land in the confined directory. */
