@@ -166,7 +166,7 @@ npm publish --registry=https://registry.npmjs.org
 gh release create v1.3.0 --title v1.3.0 --generate-notes
 ```
 
-Only `index.js`, `client.js`, `cordis.patch.yml`, `locale/*.json`, `icon.svg`, and the README are published.
+Only `index.js`, `client.js`, `cordis.patch.yml`, `locale/*.json`, `icon.svg`, the README, and the LICENSE file are published.
 
 ## Known limitations
 
@@ -175,3 +175,7 @@ Only `index.js`, `client.js`, `cordis.patch.yml`, `locale/*.json`, `icon.svg`, a
 - Byte I/O goes through `node:fs` on the Host's process path because the `fs` service has no streaming byte read, binary write, rename, or removal. This assumes a Host-local backend.
 - Text editing loads files up to 32 MiB, matching the preview's complete-file read cap.
 - The plugin does not watch the workspace itself; it asks the Files tab to re-list through the tab's own reload control after its own mutations.
+
+## License
+
+MIT © 2026 Arrosin. See [LICENSE](LICENSE).
