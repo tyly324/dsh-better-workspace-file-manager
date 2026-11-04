@@ -32,6 +32,11 @@
  *   alike, so the composer's nesting count stays balanced — so the drop
  *   doesn't also attach the files to the message.
  *
+ * DSH 0.2.2 adds a shared right-click menu (`contextMenus`). Where that
+ * service exists, rows keep its menu and this plugin contributes Download as
+ * ZIP, New folder and Delete to it; the plugin's own overlay remains for
+ * older Hosts and for right-clicking empty tree space.
+ *
  * Known limit: image drops skip the composer's pre-send image count/size
  * checks (they live inside its private intake); the send then reports those
  * limits the same way it does for any oversized attachment.
@@ -359,6 +364,17 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
     function apply(ctx) {
       ctx.effect(() => ctx.locale.register(NS, { en, zh }), 'better-workspace-files: dictionaries');
       const t = ctx.locale.bind(NS);
+      /**
+       * DSH 0.2.2+ shares one right-click menu across plugins. Older Hosts
+       * have no such service, so the plugin keeps its own overlay there.
+       */
+      const contextMenus = (() => {
+        try {
+          return ctx.get('contextMenus');
+        } catch {
+          return undefined;
+        }
+      })();
       const EMPTY_SELECTION = { root: null, items: [], anchor: null };
       /** One owner for every gesture-visible fact; components subscribe to slices. */
       const store = createSnapshotStore({
@@ -848,19 +864,25 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
         const keyboard = event.clientX === 0 && event.clientY === 0;
         const at = (rect) => (keyboard ? { x: rect.left + 16, y: rect.bottom } : { x: event.clientX, y: event.clientY });
         const scope = { sessionId: tree.sessionId, root: tree.root };
-        if (li === null) {
-          const body = event.target.closest(BODY);
-          if (body === null) return; // the header keeps the browser's own menu
+        if (li !== null) {
+          const item = itemOf(li);
+          if (!selectedIn(tree.root).some((entry) => entry.path === item.path)) select(tree.root, [item]);
+          // DSH 0.2.2's shared menu already owns row right-clicks; our actions
+          // join it through contextMenus.register below. Older Hosts get the
+          // plugin's own overlay.
+          if (contextMenus !== undefined) return;
+          const items = actionable(tree);
+          if (items.length === 0) return; // nothing this menu can act on: leave the browser's own menu
           event.preventDefault();
-          patch({ menu: { kind: 'space', ...scope, ...at(body.getBoundingClientRect()), dir: folderAt(tree, event.target) } });
+          event.stopPropagation();
+          patch({ menu: { kind: 'items', ...scope, ...at(li.firstElementChild.getBoundingClientRect()), items } });
           return;
         }
-        const item = itemOf(li);
-        if (!selectedIn(tree.root).some((entry) => entry.path === item.path)) select(tree.root, [item]);
-        const items = actionable(tree);
-        if (items.length === 0) return; // nothing this menu can act on: leave the browser's own menu
+        const body = event.target.closest(BODY);
+        if (body === null) return; // the header keeps the browser's own menu
         event.preventDefault();
-        patch({ menu: { kind: 'items', ...scope, ...at(li.firstElementChild.getBoundingClientRect()), items } });
+        event.stopPropagation();
+        patch({ menu: { kind: 'space', ...scope, ...at(body.getBoundingClientRect()), dir: folderAt(tree, event.target) } });
       }
 
       function onKeyDown(event) {
@@ -947,7 +969,11 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
       /** Open a collapsed folder through its own row, so something just created inside it is visible. */
       function reveal(root, dir) {
         if (samePath(dir, root)) return;
-        for (const button of document.querySelectorAll(`${treeScope(root)} li[data-files-path=${quote(dir)}]>[aria-expanded="false"]`)) button.click();
+        // 0.2.1 keeps the toggle on the row itself; 0.2.2 wraps the row in a
+        // div and the toggle is one level below it.
+        const row = `li[data-files-path=${quote(dir)}]`;
+        const selector = `${treeScope(root)} ${row}>[aria-expanded="false"],${treeScope(root)} ${row}>:first-child [aria-expanded="false"]`;
+        for (const button of document.querySelectorAll(selector)) button.click();
       }
 
       function NewFolderDialog({ dialog, tr }) {
@@ -1106,6 +1132,77 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
         } else if (id === 'delete') {
           openDialog({ kind: 'delete', ...scope, items: menu.items });
         }
+      }
+
+      // ---- 0.2.2+ shared context menu -------------------------------------
+
+      /** The workspace root a Session's tree shows; a preview may belong to another Session. */
+      function contextRoot(sessionId) {
+        try {
+          const cwd = ctx.get('sessions')?.list?.getSnapshot()?.byId?.[sessionId]?.cwd;
+          if (typeof cwd === 'string' && cwd !== '') return cwd;
+        } catch {
+          // Fall through to the selection the plugin last saw.
+        }
+        return store.getSnapshot().selection.root;
+      }
+
+      /**
+       * Items a shared-menu action applies to: the whole current selection when
+       * the clicked row is part of it, otherwise just the clicked row.
+       */
+      function contextItems(kind, target, root) {
+        const { selection } = store.getSnapshot();
+        const clicked = { path: target.path, type: kind };
+        const items = selection.root === root && selection.items.some((item) => samePath(item.path, target.path))
+          ? selection.items
+          : [clicked];
+        return items.filter((item) => item.type !== 'other');
+      }
+
+      /**
+       * Actions this plugin contributes to DSH 0.2.2's shared right-click menu.
+       * A single file's Download stays with the shipped file-actions plugin;
+       * this adds ZIP/folder downloads, New folder and Delete.
+       */
+      function contextMenuActions(kind, target) {
+        const root = contextRoot(target.sessionId);
+        if (typeof root !== 'string' || root === '') return [];
+        const items = contextItems(kind, target, root);
+        if (items.length === 0) return [];
+        const single = items.length === 1 ? items[0] : undefined;
+        const actions = [];
+        if (items.length > 1 || single.type === 'directory') {
+          actions.push({
+            id: 'bwfm.download',
+            label: items.length > 1 ? t('menu.downloadMany', { count: items.length }) : t('menu.downloadZip'),
+            run: () => download(target.sessionId, items.map((item) => item.path)),
+          });
+        }
+        if (kind === 'directory') {
+          actions.push({
+            id: 'bwfm.new-folder',
+            label: t('menu.newFolder'),
+            run: () => openDialog({
+              kind: 'mkdir',
+              sessionId: target.sessionId,
+              root,
+              dir: target.path,
+              initial: unusedName(t('mkdir.default'), namesIn(root, target.path)),
+            }),
+          });
+        }
+        // The workspace folder itself must never be offered for deletion.
+        if (!items.some((item) => samePath(item.path, root))) {
+          actions.push({
+            id: 'bwfm.delete',
+            label: single === undefined ? t('menu.deleteMany', { count: items.length }) : t('menu.delete'),
+            danger: true,
+            separatorBefore: true,
+            run: () => openDialog({ kind: 'delete', sessionId: target.sessionId, root, items }),
+          });
+        }
+        return actions;
       }
 
       function Overlay(props) {
@@ -1623,6 +1720,19 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
       ];
       for (const [name, id, order, component] of slots) {
         ctx.slots.inject(name, () => ctx.slots.register({ name, id, order, locale: NS }, component));
+      }
+
+      // 0.2.2+ shared right-click menu: contribute file/folder actions where
+      // the shipped sidebar offers the menu, and leave row clicks to it.
+      if (typeof contextMenus?.register === 'function') {
+        for (const target of ['file', 'directory']) {
+          ctx.effect(() => contextMenus.register({
+            id: `better-workspace-files.${target}`,
+            target,
+            order: 300,
+            resolve: (value) => contextMenuActions(target, value),
+          }), `better-workspace-files: ${target} context menu`);
+        }
       }
 
       // Preview opening control: shadow the shipped `open-in-app` cell (a lower
