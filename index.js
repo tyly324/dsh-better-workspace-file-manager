@@ -54,6 +54,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import zlib from 'node:zlib';
 import z from '@deepseek-ai/schemastery';
+import { mountExtras } from './extras.js';
 
 export const inject = ['connection', 'fs', 'sessions'];
 
@@ -108,6 +109,7 @@ export function apply(ctx) {
       fetch: (request) => respond(handle, request),
     }), `better-workspace-file-manager: ${path}`);
   }
+  mountExtras(ctx);
 }
 
 /** Run one route handler, turning failures into a JSON `{ error, message }` body. */

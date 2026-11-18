@@ -1,7 +1,7 @@
 {
   "name": "dsh-better-workspace-file-manager",
-  "version": "1.3.1",
-  "description": "Fork of dsh-better-workspace-file-manager: upload target confirmation, per-file progress with retry, and a delete-dialog close fix for the DSH Web Files tab.",
+  "version": "1.4.0",
+  "description": "DSH Web Files tab file manager (fork): upload confirmation + progress + retry, cut/copy/paste, rename, ZIP compress/extract, properties, new-folder button, delete dialog fix.",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -12,6 +12,7 @@
   },
   "files": [
     "index.js",
+    "extras.js",
     "client.js",
     "cordis.patch.yml",
     "locale/*.json",

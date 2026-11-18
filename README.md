@@ -9,6 +9,7 @@
 > - **Upload target + confirmation** — the tree is registered even when the header actions render outside it (selection, marquee, drag and the empty-space menu work again), and Upload first asks which folder the files go to.
 > - **Upload progress, failure and retry** — a bottom-right panel shows a per-file progress bar; a failed file keeps its error and gets a Retry button.
 > - **Delete dialog close** — the confirmation always unmounts itself after a successful delete, and a stale row closes with a “already gone” toast instead of leaving a dead dialog.
+> - **Everyday file operations** — cut / copy / paste, rename, ZIP compress and extract, a Properties dialog (name, type, size or item count, modified time, mode, absolute path), and a header **New folder** button that targets the selected folder.
 >
 > Install this fork: `dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager`. Released under the same MIT license as the original (see [LICENSE](LICENSE)).
 
@@ -23,6 +24,7 @@ A file manager for the DeepSeek Harness (DSH) Web **Files** tab and the file pre
 - **Download** one file, several selected items, or a whole folder as a ZIP. Archives are streamed, so large folders are not held in memory.
 - **New folder** from the right-click menu, with keep-both naming for folders created on your behalf.
 - **Delete** files and folders after a confirmation dialog. Directories are removed with everything inside them. The dialog always closes after a successful delete; if the row was already gone it closes with a toast instead of keeping a dead dialog.
+- **Cut / copy / paste** one row into a folder (keep-both naming, never overwrite), **Rename**, **ZIP compress** and **extract** a `.zip`, and a **Properties** dialog with name, type, size (or item count for folders), modified time, mode and absolute path.
 - **Drag to move** rows onto a folder. A name already taken at the destination becomes `name (1).ext`, never an overwrite.
 - **Drag workspace rows into a conversation** to add `@path` chips, or image attachments for PNG/JPEG/WebP/GIF.
 
@@ -44,6 +46,7 @@ Everything below is in this fork only, not upstream:
 - **Upload confirmation** — the Upload button opens a modal with the absolute target path and only then opens the file picker.
 - **Upload progress / retry** — uploads use `XMLHttpRequest` (the Connection Fetch route rejects a streamed request body), and a transfer panel reports `loaded/total`, keeps failures with their reason, and retries the same `File`/entry.
 - **Delete dialog** — local `closed` state so the dialog unmounts from its own handler; `not-found` closes and refreshes with a toast.
+- **Companion features folded in** — the former separate `dsh-files-extras` plugin (cut/copy/paste, rename, ZIP compress/extract, Properties, and the header New folder button) now lives inside this package: one install, one bundle, no second plugin to keep in sync.
 
 ## Requirements
 

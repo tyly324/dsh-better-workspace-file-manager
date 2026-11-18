@@ -379,7 +379,7 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
       }
     }
 
-    function apply(ctx) {
+    function applyBase(ctx) {
       ctx.effect(() => ctx.locale.register(NS, { en, zh }), 'better-workspace-files: dictionaries');
       const t = ctx.locale.bind(NS);
       /**
@@ -1932,6 +1932,634 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
         }, SettingsPage));
         return typeof forms?.whileServed === 'function' ? forms.whileServed([SETTINGS_ENTRY], register) : register();
       }, 'better-workspace-files: settings page');
+      applyExtras(ctx);
+    }
+
+    const applyExtras = (() => {
+    const React = require('react');
+    const ui = require('@deepseek-ai/dsh-client-ui-primitives');
+    const h = React.createElement;
+
+    const NS = 'files-extras';
+    const ROUTE = 'api/files-extras/';
+
+    const zh = {
+      'menu.cut': '剪切',
+      'menu.copy': '复制',
+      'menu.paste': '粘贴 {count} 项到此处',
+      'menu.pasteEmpty': '粘贴（剪贴板为空）',
+      'menu.rename': '重命名…',
+      'menu.compress': '压缩为 ZIP',
+      'menu.extract': '解压到当前目录',
+      'menu.props': '属性',
+      'props.title': '属性',
+      'props.name': '名称',
+      'props.type': '类型',
+      'props.typeFile': '文件',
+      'props.typeDir': '文件夹',
+      'props.typeLink': '符号链接',
+      'props.size': '大小',
+      'props.entries': '共 {count} 项',
+      'props.mtime': '修改时间',
+      'props.mode': '权限',
+      'props.path': '路径',
+      'props.loading': '读取中…',
+      'props.failed': '无法读取属性：{reason}',
+      'newFolder.label': '新建文件夹',
+      'newFolder.tooltip': '新建文件夹',
+      'newFolder.title': '新建文件夹',
+      'newFolder.in': '将在“{dir}”中创建文件夹。',
+      'newFolder.default': '新建文件夹',
+      'newFolder.create': '创建',
+      'newFolder.done': '已创建“{name}”',
+      'newFolder.failed': '无法创建文件夹：{reason}',
+      'clip.copied': '已复制 {count} 项',
+      'clip.cut': '已剪切 {count} 项，粘贴后移动',
+      'paste.done': '已粘贴 {count} 项到“{dir}”',
+      'paste.failed': '粘贴失败：{reason}',
+      'rename.title': '重命名',
+      'rename.in': '在“{dir}”中重命名。',
+      'rename.label': '新名称',
+      'rename.confirm': '重命名',
+      'rename.done': '已重命名为“{name}”',
+      'rename.failed': '重命名失败：{reason}',
+      'dialog.cancel': '取消',
+      'dialog.close': '关闭',
+      'compress.done': '已创建“{name}”',
+      'compress.failed': '压缩失败：{reason}',
+      'extract.done': '已解压到“{dir}”，共 {count} 个文件',
+      'extract.failed': '解压失败：{reason}',
+      'err.outside-workspace': '路径不在工作区内',
+      'err.exists': '同名项目已存在',
+      'err.bad-name': '名称不能为空、不能是“.”或“..”，也不能包含 / 或 \\',
+      'err.into-itself': '不能把文件夹复制到它自己里面',
+      'err.no-session': '找不到该会话',
+      'err.not-found': '项目不存在',
+      'err.not-zip': '这不是 ZIP 文件',
+      'err.zip64-unsupported': '暂不支持 ZIP64 格式',
+      'err.encrypted-zip': '不支持加密 ZIP',
+      'err.unsupported-method': '不支持的压缩方式',
+      'err.symlink': '不支持对符号链接执行该操作',
+      'err.symlink-entry': '压缩包内含符号链接，已拒绝',
+      'err.zip-slip': '压缩包含有非法路径，已拒绝',
+      'err.too-large': '文件或压缩包过大',
+      'err.too-many-entries': '条目过多',
+      'err.corrupt-zip': '压缩包已损坏',
+      'err.not-a-file': '请选择一个 ZIP 文件',
+      'err.too-many-conflicts': '同名项目过多',
+      'err.internal': '服务器内部错误',
+      'err.failed': '操作失败',
+    };
+
+    const en = {
+      'menu.cut': 'Cut',
+      'menu.copy': 'Copy',
+      'menu.paste': 'Paste {count} item(s) here',
+      'menu.pasteEmpty': 'Paste (clipboard is empty)',
+      'menu.rename': 'Rename…',
+      'menu.compress': 'Compress to ZIP',
+      'menu.extract': 'Extract here',
+      'menu.props': 'Properties',
+      'props.title': 'Properties',
+      'props.name': 'Name',
+      'props.type': 'Type',
+      'props.typeFile': 'File',
+      'props.typeDir': 'Folder',
+      'props.typeLink': 'Symlink',
+      'props.size': 'Size',
+      'props.entries': '{count} items',
+      'props.mtime': 'Modified',
+      'props.mode': 'Mode',
+      'props.path': 'Path',
+      'props.loading': 'Reading…',
+      'props.failed': 'Could not read properties: {reason}',
+      'newFolder.label': 'New folder',
+      'newFolder.tooltip': 'New folder',
+      'newFolder.title': 'New folder',
+      'newFolder.in': 'Create a folder inside “{dir}”.',
+      'newFolder.default': 'New folder',
+      'newFolder.create': 'Create',
+      'newFolder.done': 'Created “{name}”',
+      'newFolder.failed': 'Could not create the folder: {reason}',
+      'clip.copied': 'Copied {count} item(s)',
+      'clip.cut': 'Cut {count} item(s); paste to move',
+      'paste.done': 'Pasted {count} item(s) into “{dir}”',
+      'paste.failed': 'Paste failed: {reason}',
+      'rename.title': 'Rename',
+      'rename.in': 'Rename inside “{dir}”.',
+      'rename.label': 'New name',
+      'rename.confirm': 'Rename',
+      'rename.done': 'Renamed to “{name}”',
+      'rename.failed': 'Rename failed: {reason}',
+      'dialog.cancel': 'Cancel',
+      'dialog.close': 'Close',
+      'compress.done': 'Created “{name}”',
+      'compress.failed': 'Compress failed: {reason}',
+      'extract.done': 'Extracted into “{dir}” ({count} file(s))',
+      'extract.failed': 'Extract failed: {reason}',
+      'err.outside-workspace': 'That path is outside the workspace',
+      'err.exists': 'A project with that name already exists',
+      'err.bad-name': 'A name cannot be empty, “.”, “..”, or contain / or \\',
+      'err.into-itself': 'A folder cannot be copied into itself',
+      'err.no-session': 'Session not found',
+      'err.not-found': 'Not found',
+      'err.not-zip': 'Not a ZIP file',
+      'err.zip64-unsupported': 'ZIP64 is not supported yet',
+      'err.encrypted-zip': 'Encrypted ZIPs are not supported',
+      'err.unsupported-method': 'Unsupported compression method',
+      'err.symlink': 'That operation does not support symlinks',
+      'err.symlink-entry': 'The archive contains a symlink; refused',
+      'err.zip-slip': 'The archive contains an unsafe path; refused',
+      'err.too-large': 'File or archive is too large',
+      'err.too-many-entries': 'Too many entries',
+      'err.corrupt-zip': 'The archive is corrupt',
+      'err.not-a-file': 'Pick a ZIP file',
+      'err.too-many-conflicts': 'Too many name conflicts',
+      'err.internal': 'Internal server error',
+      'err.failed': 'Operation failed',
+    };
+
+    /** Module-level UI state: one dialog and one toast, plus the in-page clipboard. */
+    let state = { dialog: null, toast: null, clipboard: null };
+    /** Last clicked directory row (absolute path); a file click clears it, matching Upload's target rule. */
+    let pickedDir = null;
+    let toastSeq = 0;
+    const listeners = new Set();
+    const snapshot = () => state;
+    const update = (patch) => {
+      state = { ...state, ...patch };
+      for (const listener of [...listeners]) listener();
+    };
+    const subscribe = (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    };
+
+    const baseName = (path) => String(path).replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '/';
+    const dirName = (path) => {
+      const trimmed = String(path).replace(/[\\/]+$/, '');
+      const cut = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'));
+      return cut <= 0 ? trimmed.slice(0, cut + 1) : trimmed.slice(0, cut);
+    };
+
+    function apply(ctx) {
+      ctx.effect(() => ctx.locale.register(NS, { en, zh }), 'files-extras: dictionaries');
+      const t = ctx.locale.bind(NS);
+
+      const contextMenus = (() => {
+        try {
+          return ctx.get('contextMenus');
+        } catch {
+          return undefined;
+        }
+      })();
+
+      /** The folder a new-folder dialog starts in: the selected directory, else the tree root. */
+      function targetDir(root) {
+        if (typeof pickedDir !== 'string' || pickedDir === '') return root;
+        if (pickedDir === root || pickedDir.startsWith(root + '/') || pickedDir.startsWith(root + '\\')) return pickedDir;
+        return root;
+      }
+
+      const trackPick = (event) => {
+        const row = event.target instanceof Element ? event.target.closest('li[data-files-entry]') : null;
+        if (row === null) return;
+        const path = row.getAttribute('data-files-path');
+        if (path === null) return;
+        pickedDir = row.getAttribute('data-files-entry') === 'directory' ? path : null;
+      };
+      document.addEventListener('click', trackPick, true);
+      ctx.effect(() => () => document.removeEventListener('click', trackPick, true), 'files-extras: picked directory');
+
+      const reason = (error) => {
+        const code = typeof error?.code === 'string' ? error.code : undefined;
+        const message = typeof error?.message === 'string' ? error.message : '';
+        const key = `err.${code ?? message}`;
+        const text = t(key);
+        return text === key ? message || t('err.failed') : text;
+      };
+
+      const notify = (text, tone) => {
+        toastSeq += 1;
+        update({ toast: { seq: toastSeq, text, tone } });
+      };
+
+      async function postTo(url, fields) {
+        const response = await fetch(url, {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: new URLSearchParams(fields),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => undefined);
+          throw Object.assign(new Error(body?.error ?? body?.message ?? `HTTP ${response.status}`), {
+            code: body?.error,
+          });
+        }
+        return response.json();
+      }
+
+      const post = (endpoint, fields) => postTo(`${ROUTE}${endpoint}`, fields);
+      /** The workspace file manager owns creation; this plugin only adds a visible entry point. */
+      const postBase = (endpoint, fields) => postTo(`api/better-workspace-files/${endpoint}`, fields);
+
+      /** Re-list the Files tree through its own reload control after a write. */
+      function reloadTree() {
+        for (const button of document.querySelectorAll('[data-files-state="tree"] [data-files-reload]')) button.click();
+      }
+
+      /** Mark one row for a later paste; the tree itself is not touched. */
+      function remember(mode, target) {
+        update({ clipboard: { mode, sessionId: target.sessionId, paths: [target.path] } });
+        notify(t(mode === 'cut' ? 'clip.cut' : 'clip.copied', { count: 1 }), 'success');
+      }
+
+      async function paste(target, clipboard) {
+        if (clipboard === null || clipboard.sessionId !== target.sessionId) return;
+        try {
+          const result = await post('copy', [
+            ['sessionId', target.sessionId],
+            ['dir', target.path],
+            ['mode', clipboard.mode],
+            ...clipboard.paths.map((path) => ['path', path]),
+          ]);
+          if (clipboard.mode === 'cut') update({ clipboard: null });
+          notify(t('paste.done', { count: result.items.length, dir: baseName(target.path) }), 'success');
+        } catch (error) {
+          notify(t('paste.failed', { reason: reason(error) }), 'danger');
+        }
+      }
+
+      async function compress(target) {
+        try {
+          const result = await post('compress', [
+            ['sessionId', target.sessionId],
+            ['path', target.path],
+          ]);
+          notify(t('compress.done', { name: result.name }), 'success');
+        } catch (error) {
+          notify(t('compress.failed', { reason: reason(error) }), 'danger');
+        }
+      }
+
+      async function extract(target) {
+        try {
+          const result = await post('extract', [
+            ['sessionId', target.sessionId],
+            ['path', target.path],
+          ]);
+          notify(t('extract.done', { dir: result.dir, count: result.entries }), 'success');
+        } catch (error) {
+          notify(t('extract.failed', { reason: reason(error) }), 'danger');
+        }
+      }
+
+      function openRename(target) {
+        update({
+          dialog: {
+            kind: 'rename',
+            seq: Date.now(),
+            sessionId: target.sessionId,
+            path: target.path,
+            name: baseName(target.path),
+          },
+        });
+      }
+
+      /**
+       * Actions for DSH's shared right-click menu, in reading order:
+       * cut → copy → paste, then the name/ZIP group. The contribution order
+       * (250) sits between the shipped open/download actions (100/200) and
+       * the workspace manager's own contribution (300), so that manager's
+       * permanent Delete ends up last, in its own section.
+       */
+      function menuActions(kind, target) {
+        const actions = [];
+        const clipboard = state.clipboard;
+        actions.push({
+          id: 'fx.cut',
+          label: t('menu.cut'),
+          separatorBefore: true,
+          run: () => remember('cut', target),
+        });
+        actions.push({ id: 'fx.copy', label: t('menu.copy'), run: () => remember('copy', target) });
+        if (kind === 'directory') {
+          actions.push({
+            id: 'fx.paste',
+            label: clipboard === null
+              ? t('menu.pasteEmpty')
+              : t('menu.paste', { count: clipboard.paths.length }),
+            disabled: clipboard === null || clipboard.sessionId !== target.sessionId,
+            run: () => paste(target, clipboard),
+          });
+        }
+        actions.push({
+          id: 'fx.rename',
+          label: t('menu.rename'),
+          separatorBefore: true,
+          run: () => openRename(target),
+        });
+        actions.push({ id: 'fx.compress', label: t('menu.compress'), run: () => compress(target) });
+        if (kind === 'file' && /\.zip$/i.test(target.path)) {
+          actions.push({ id: 'fx.extract', label: t('menu.extract'), run: () => extract(target) });
+        }
+        actions.push({
+          id: 'fx.props',
+          label: t('menu.props'),
+          separatorBefore: true,
+          run: () => update({
+            dialog: { kind: 'props', seq: Date.now(), sessionId: target.sessionId, path: target.path },
+          }),
+        });
+        return actions;
+      }
+
+      function RenameDialog({ dialog, tr }) {
+        const [name, setName] = React.useState(dialog.name);
+        const [busy, setBusy] = React.useState(false);
+        const [error, setError] = React.useState(null);
+        const inputRef = React.useRef(null);
+        React.useEffect(() => {
+          const element = inputRef.current;
+          if (element !== null) {
+            element.focus();
+            element.select();
+          }
+        }, []);
+        const invalid = name === '' || name === '.' || name === '..' || /[/\\\0]/.test(name);
+        const blocked = busy || invalid;
+        const close = () => {
+          if (!busy) update({ dialog: null });
+        };
+        const submit = async () => {
+          if (blocked) return;
+          setBusy(true);
+          setError(null);
+          try {
+            await post('rename', [
+              ['sessionId', dialog.sessionId],
+              ['path', dialog.path],
+              ['name', name],
+            ]);
+            update({ dialog: null });
+            notify(tr('rename.done', { name }), 'success');
+          } catch (failure) {
+            setError(tr('rename.failed', { reason: reason(failure) }));
+            setBusy(false);
+          }
+        };
+        return h(ui.Modal, {
+          open: true,
+          onClose: close,
+          closeLabel: tr('dialog.close'),
+          title: tr('rename.title'),
+          description: tr('rename.in', { dir: baseName(dirName(dialog.path)) }),
+          footer: h(React.Fragment, null,
+            h(ui.Button, { variant: 'outline', disabled: busy, onClick: close }, tr('dialog.cancel')),
+            h(ui.Button, { variant: 'primary', disabled: blocked, onClick: submit }, tr('rename.confirm'))),
+        },
+        h('input', {
+          ref: inputRef,
+          value: name,
+          'aria-label': tr('rename.label'),
+          'aria-invalid': invalid || error !== null || undefined,
+          disabled: busy,
+          spellCheck: false,
+          autoComplete: 'off',
+          style: {
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '8px 10px',
+            borderRadius: 8,
+            border: '1px solid currentColor',
+            background: 'transparent',
+            color: 'inherit',
+            font: 'inherit',
+            opacity: busy ? 0.6 : 1,
+          },
+          onChange: (event) => {
+            setName(event.target.value);
+            setError(null);
+          },
+          onKeyDown: (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              submit();
+            }
+          },
+        }),
+        error !== null && h('p', { role: 'alert', style: { margin: '8px 0 0', fontSize: 13 } }, error),
+        invalid && error === null && h('p', { style: { margin: '8px 0 0', fontSize: 13, opacity: 0.7 } }, tr('err.bad-name')));
+      }
+
+      function NewFolderDialog({ dialog, tr }) {
+        const [name, setName] = React.useState(tr('newFolder.default'));
+        const [busy, setBusy] = React.useState(false);
+        const [error, setError] = React.useState(null);
+        const inputRef = React.useRef(null);
+        React.useEffect(() => {
+          const element = inputRef.current;
+          if (element !== null) {
+            element.focus();
+            element.select();
+          }
+        }, []);
+        const trimmed = name.trim();
+        const invalid = trimmed === '' || trimmed === '.' || trimmed === '..' || /[/\\\0]/.test(trimmed);
+        const blocked = busy || invalid;
+        const close = () => {
+          if (!busy) update({ dialog: null });
+        };
+        const submit = async () => {
+          if (blocked) return;
+          setBusy(true);
+          setError(null);
+          try {
+            const created = await postBase('mkdir', [
+              ['sessionId', dialog.sessionId],
+              ['dir', dialog.root],
+              ['name', trimmed],
+            ]);
+            update({ dialog: null });
+            notify(tr('newFolder.done', { name: created.name ?? trimmed }), 'success');
+            reloadTree();
+          } catch (failure) {
+            setError(tr('newFolder.failed', { reason: reason(failure) }));
+            setBusy(false);
+          }
+        };
+        return h(ui.Modal, {
+          open: true,
+          onClose: close,
+          closeLabel: tr('dialog.close'),
+          title: tr('newFolder.title'),
+          description: tr('newFolder.in', { dir: dialog.root }),
+          footer: h(React.Fragment, null,
+            h(ui.Button, { variant: 'outline', disabled: busy, onClick: close }, tr('dialog.cancel')),
+            h(ui.Button, { variant: 'primary', disabled: blocked, onClick: submit }, tr('newFolder.create'))),
+        },
+        h('input', {
+          ref: inputRef,
+          value: name,
+          'aria-label': tr('newFolder.label'),
+          'aria-invalid': invalid || error !== null || undefined,
+          disabled: busy,
+          spellCheck: false,
+          autoComplete: 'off',
+          style: {
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '8px 10px',
+            borderRadius: 8,
+            border: '1px solid currentColor',
+            background: 'transparent',
+            color: 'inherit',
+            font: 'inherit',
+            opacity: busy ? 0.6 : 1,
+          },
+          onChange: (event) => {
+            setName(event.target.value);
+            setError(null);
+          },
+          onKeyDown: (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              submit();
+            }
+          },
+        }),
+        error !== null && h('p', { role: 'alert', style: { margin: '8px 0 0', fontSize: 13 } }, error),
+        invalid && error === null && h('p', { style: { margin: '8px 0 0', fontSize: 13, opacity: 0.7 } }, tr('err.bad-name')));
+      }
+
+      /** Header action: always creates in the tree's root, so an empty workspace has an entry point. */
+      function NewFolderButton(props) {
+        const { absolutePath, sessionId } = props;
+        const tr = props.t ?? t;
+        return h(ui.Tooltip, { label: tr('newFolder.tooltip'), side: 'bottom', delayMs: 500 },
+          h('button', {
+            type: 'button',
+            className: 'fx-tool',
+            'aria-label': tr('newFolder.label'),
+            onClick: () => update({
+              dialog: { kind: 'mkdir', seq: Date.now(), sessionId, root: targetDir(absolutePath) },
+            }),
+          }, h(ui.IconProjectAddOutlineRegular, { size: 16 })));
+      }
+
+      const formatBytes = (bytes) => {
+        if (!Number.isFinite(bytes)) return '—';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let value = bytes;
+        let unit = 0;
+        while (value >= 1024 && unit < units.length - 1) {
+          value /= 1024;
+          unit += 1;
+        }
+        return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+      };
+
+      function PropsDialog({ dialog, tr }) {
+        const [data, setData] = React.useState(null);
+        const [error, setError] = React.useState(null);
+        React.useEffect(() => {
+          let alive = true;
+          post('stat', [['sessionId', dialog.sessionId], ['path', dialog.path]])
+            .then((value) => { if (alive) setData(value); })
+            .catch((failure) => { if (alive) setError(tr('props.failed', { reason: reason(failure) })); });
+          return () => { alive = false; };
+        }, []);
+        const close = () => update({ dialog: null });
+        const typeLabel = data === null ? ''
+          : data.type === 'directory' ? tr('props.typeDir')
+          : data.type === 'symlink' ? tr('props.typeLink')
+          : tr('props.typeFile');
+        const rows = data === null ? [] : [
+          [tr('props.name'), data.name],
+          [tr('props.type'), typeLabel],
+          [tr('props.size'), data.type === 'directory' ? tr('props.entries', { count: data.entries }) : formatBytes(data.bytes)],
+          [tr('props.mtime'), new Date(data.mtime).toLocaleString()],
+          [tr('props.mode'), data.mode],
+          [tr('props.path'), data.path],
+        ];
+        return h(ui.Modal, {
+          open: true,
+          onClose: close,
+          closeLabel: tr('dialog.close'),
+          title: tr('props.title'),
+          description: data?.name ?? baseName(dialog.path),
+          footer: h(ui.Button, { variant: 'primary', onClick: close }, tr('dialog.close')),
+        },
+        error !== null
+          ? h('p', { role: 'alert', style: { margin: 0, fontSize: 13 } }, error)
+          : data === null
+            ? h('p', { style: { margin: 0, fontSize: 13, opacity: 0.7 } }, tr('props.loading'))
+            : h('dl', { className: 'fx-props' },
+              ...rows.flatMap(([key, value]) => [
+                h('dt', { key: `k-${key}` }, key),
+                h('dd', { key: `v-${key}` }, String(value)),
+              ])));
+      }
+
+      function Overlay(props) {
+        const current = React.useSyncExternalStore(subscribe, snapshot);
+        const tr = props.t ?? t;
+        return h(React.Fragment, null,
+          current.dialog !== null && current.dialog.kind === 'rename'
+            && h(RenameDialog, { key: current.dialog.seq, dialog: current.dialog, tr }),
+          current.dialog !== null && current.dialog.kind === 'mkdir'
+            && h(NewFolderDialog, { key: current.dialog.seq, dialog: current.dialog, tr }),
+          current.dialog !== null && current.dialog.kind === 'props'
+            && h(PropsDialog, { key: current.dialog.seq, dialog: current.dialog, tr }),
+          current.toast !== null && h(ui.Toast, {
+            key: current.toast.seq,
+            text: current.toast.text,
+            tone: current.toast.tone,
+            onDone: () => {
+              if (snapshot().toast?.seq === current.toast.seq) update({ toast: null });
+            },
+          }));
+      }
+
+      if (typeof contextMenus?.register === 'function') {
+        for (const target of ['file', 'directory']) {
+          ctx.effect(() => contextMenus.register({
+            id: `files-extras.${target}`,
+            target,
+            order: 250,
+            resolve: (value) => menuActions(target, value),
+          }), `files-extras: ${target} context menu`);
+        }
+      }
+
+      ctx.slots.inject('sidebar.right.tab.files.actions', () => ctx.slots.register({
+        name: 'sidebar.right.tab.files.actions',
+        id: 'files-extras-new-folder',
+        order: -10,
+        locale: NS,
+      }, NewFolderButton));
+
+      ctx.effect(() => {
+        const style = document.createElement('style');
+        style.dataset.plugin = 'files-extras';
+        style.textContent = `.fx-tool{display:inline-grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:inherit;cursor:pointer;opacity:.75}.fx-tool:hover{background:rgba(127,127,127,.16);opacity:1}.fx-props{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0;font-size:13px}.fx-props dt{opacity:.6;white-space:nowrap}.fx-props dd{margin:0;word-break:break-all;user-select:text}.bwfm-transfers{position:fixed;right:16px;bottom:16px;z-index:1200;width:320px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;gap:8px;padding:10px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-overlay);box-shadow:var(--dsw-elevation-soft);font-size:13px;color:var(--dsw-alias-label-primary)}.bwfm-transfer{display:flex;flex-direction:column;gap:4px}.bwfm-transfer-head{display:flex;justify-content:space-between;gap:8px}.bwfm-transfer-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bwfm-bar{height:4px;border-radius:2px;background:var(--dsw-alias-interactive-bg-hover);overflow:hidden}.bwfm-bar-fill{height:100%;border-radius:2px;background:var(--dsw-alias-brand-primary);transition:width .12s linear}.bwfm-bar-fill[data-error]{background:#d9534f}.bwfm-transfer-error{display:flex;justify-content:space-between;gap:8px;color:#d9534f;font-size:12px}.bwfm-transfer-error span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bwfm-retry{flex:none;border:0;background:transparent;color:var(--dsw-alias-brand-primary);cursor:pointer;padding:0;font:inherit}`;
+        document.head.append(style);
+        return () => style.remove();
+      }, 'files-extras: styles');
+
+      ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+        name: 'shell.overlay',
+        id: 'files-extras',
+        order: 0,
+        locale: NS,
+      }, Overlay));
+    }
+
+      return apply;
+    })();
+
+    function apply(ctx) {
+      applyBase(ctx);
     }
 
     return { inject: ['slots', 'locale'], apply };
