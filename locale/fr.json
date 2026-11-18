@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Gestionnaire de fichiers d’espace de travail",
+    "description": "Un gestionnaire de fichiers pour l’onglet Fichiers de DSH Web : téléversement avec confirmation de la destination, progression et nouvelle tentative ; couper/copier/coller, renommer, compresser et extraire des ZIP, propriétés, nouveau dossier ; télécharger, supprimer, déplacer par glisser-déposer et éditer le texte sur place."
+  }
+}

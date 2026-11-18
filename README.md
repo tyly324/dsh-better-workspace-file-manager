@@ -1,5 +1,7 @@
 # Better Workspace File Manager
 
+**English** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Русский](README.ru.md) · [Português](README.pt.md)
+
 <p align="center">
   <img src="icon.svg" width="72" height="72" alt="Better Workspace File Manager icon">
 </p>

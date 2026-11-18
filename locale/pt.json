@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Gerenciador de arquivos do espaço de trabalho",
+    "description": "Um gerenciador de arquivos para a aba Arquivos do DSH Web: envio com confirmação de destino, progresso e nova tentativa; recortar/copiar/colar, renomear, comprimir e extrair ZIP, propriedades, nova pasta; baixar, excluir, mover arrastando e editar texto no local."
+  }
+}

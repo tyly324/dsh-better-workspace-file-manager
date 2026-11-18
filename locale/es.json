@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Gestor de archivos del espacio de trabajo",
+    "description": "Un gestor de archivos para la pestaña Archivos de DSH Web: subida con confirmación de destino, progreso y reintento; cortar/copiar/pegar, cambiar nombre, comprimir y extraer ZIP, propiedades, nueva carpeta; descargar, eliminar, mover arrastrando y editar texto en el sitio."
+  }
+}

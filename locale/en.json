@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Better Workspace File Manager",
-    "description": "Adds file management to the Files tab and file previews: upload by button or drag-and-drop, multi-select, a right-click menu to download, create folders and delete, drag-to-move, drag workspace files into a conversation, a Download option in every file preview, and in-place editing of text files with a Save button or 5-second auto-save."
+    "description": "A file manager for the DSH Web Files tab: upload with target confirmation, progress and retry; cut/copy/paste, rename, ZIP compress and extract, properties, new folder; download, delete, drag-to-move and in-place text editing."
   }
 }
