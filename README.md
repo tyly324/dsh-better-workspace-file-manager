@@ -62,8 +62,7 @@ This fork (recommended for the features above):
 dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager
 ```
 
-The upstream package (without these changes) is installed from npm:
-
+Upstream install (without these changes):
 
 
 ### From the DSH Plugins page
