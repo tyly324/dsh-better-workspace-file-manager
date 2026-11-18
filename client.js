@@ -75,6 +75,14 @@ window.__ModuleLoader__.load({
     const en = {
       'upload.label': 'Upload files',
       'upload.tooltip': 'Upload to {name}',
+      'upload.confirmTitle': 'Upload files',
+      'upload.confirmTo': 'Files will be uploaded to “{dir}”.',
+      'upload.confirmHint': 'To use another folder, cancel, select that folder in the tree, then click Upload again.',
+      'upload.confirmPick': 'Choose files',
+      'upload.retry': 'Retry',
+      'upload.retryDone': 'Retried and uploaded “{name}”',
+      'upload.working': 'Uploading',
+      'upload.failedShort': 'Failed',
       'upload.doneOne': 'Uploaded “{name}”',
       'upload.doneMany': 'Uploaded {count} items to {dir}',
       'upload.failed': 'Couldn’t upload “{name}”: {reason}',
@@ -103,6 +111,7 @@ window.__ModuleLoader__.load({
       'delete.doneOne': 'Deleted “{name}”',
       'delete.doneMany': 'Deleted {count} items',
       'delete.failed': 'Couldn’t delete: {reason}',
+      'delete.gone': 'That item was already gone; the list was refreshed.',
       'move.hint': 'Move to {name}',
       'move.doneOne': 'Moved “{name}” to {dir}',
       'move.doneMany': 'Moved {count} items to {dir}',
@@ -158,6 +167,14 @@ window.__ModuleLoader__.load({
     const zh = {
       'upload.label': '上传文件',
       'upload.tooltip': '上传到 {name}',
+      'upload.confirmTitle': '上传文件',
+      'upload.confirmTo': '文件将上传到“{dir}”。',
+      'upload.confirmHint': '要换目录，先取消，在树里选中目标文件夹后再点上传。',
+      'upload.confirmPick': '选择文件',
+      'upload.retry': '重试',
+      'upload.retryDone': '已重试并上传“{name}”',
+      'upload.working': '上传中',
+      'upload.failedShort': '失败',
       'upload.doneOne': '已上传“{name}”',
       'upload.doneMany': '已上传 {count} 项到 {dir}',
       'upload.failed': '无法上传“{name}”：{reason}',
@@ -186,6 +203,7 @@ window.__ModuleLoader__.load({
       'delete.doneOne': '已删除“{name}”',
       'delete.doneMany': '已删除 {count} 项',
       'delete.failed': '无法删除：{reason}',
+      'delete.gone': '该项目已不存在，已刷新列表。',
       'move.hint': '移动到 {name}',
       'move.doneOne': '已将“{name}”移动到 {dir}',
       'move.doneMany': '已将 {count} 项移动到 {dir}',
@@ -388,6 +406,8 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
         toast: null,
         /** Running upload batches per tree root, so that tree's upload button shows progress. */
         uploading: {},
+        /** Per-file upload tasks shown in the transfer panel (progress, failure, retry). */
+        transfers: [],
       });
       const patch = (next) => store.set({ ...store.getSnapshot(), ...next });
       const useSlice = (pick) => React.useSyncExternalStore(store.subscribe, () => pick(store.getSnapshot()));
@@ -509,10 +529,31 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
 
       // ---- upload ---------------------------------------------------------
 
-      async function uploadFile(sessionId, dir, file) {
+      async function uploadFile(sessionId, dir, file, onProgress) {
         const query = new URLSearchParams({ sessionId, dir, name: file.name });
-        const response = await request(`upload?${query}`, { headers: { 'content-type': 'application/octet-stream' }, body: file });
-        return (await response.json()).name;
+        // XHR (not fetch) because only XHR reports upload progress; the Connection
+        // Fetch route rejects a streamed request body, so send the File itself.
+        return await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', routeUrl(`upload?${query}`));
+          xhr.setRequestHeader('content-type', 'application/octet-stream');
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) onProgress?.(event.loaded, event.total);
+          });
+          xhr.addEventListener('load', () => {
+            let body;
+            try { body = JSON.parse(xhr.responseText); } catch { body = undefined; }
+            if (xhr.status >= 200 && xhr.status < 300) {
+              if (body?.name !== undefined) resolve(body.name);
+              else reject(new Error(`HTTP ${xhr.status}`));
+              return;
+            }
+            reject(Object.assign(new Error(body?.message ?? body?.error ?? `HTTP ${xhr.status}`), { code: body?.error }));
+          });
+          xhr.addEventListener('error', () => reject(new Error('network error')));
+          xhr.addEventListener('abort', () => reject(new Error('aborted')));
+          xhr.send(file);
+        });
       }
 
       const entryFile = (entry) => new Promise((resolve, reject) => entry.file(resolve, reject));
@@ -533,14 +574,14 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
        * failure inside it is reported and skipped so the rest still arrives.
        * @returns the name the item was saved under.
        */
-      async function uploadOne(sessionId, dir, source, failed) {
-        if (source instanceof File) return uploadFile(sessionId, dir, source);
-        if (source.isFile) return uploadFile(sessionId, dir, await entryFile(source));
+      async function uploadOne(sessionId, dir, source, failed, onProgress) {
+        if (source instanceof File) return uploadFile(sessionId, dir, source, onProgress);
+        if (source.isFile) return uploadFile(sessionId, dir, await entryFile(source), onProgress);
         const { name } = await post('mkdir', [['sessionId', sessionId], ['dir', dir], ['name', source.name], ['unique', '1']]);
         const inside = joinPath(dir, name);
         for (const child of await entryChildren(source)) {
           try {
-            await uploadOne(sessionId, inside, child, failed);
+            await uploadOne(sessionId, inside, child, failed, onProgress);
           } catch (error) {
             failed(child.name, error);
           }
@@ -548,34 +589,79 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
         return name;
       }
 
+      /** Transfer tasks, keyed by a module counter; the File/entry stays for retry. */
+      let transferSeq = 0;
+      const setTransfer = (id, change) => patch({
+        transfers: store.getSnapshot().transfers.map((task) => (task.id === id ? { ...task, ...change } : task)),
+      });
+      const removeTransfer = (id, delay) => {
+        setTimeout(() => patch({
+          transfers: store.getSnapshot().transfers.filter((task) => task.id !== id),
+        }), delay);
+      };
+
+      /** Run one transfer, reporting progress; a failure stays in the panel with a retry. */
+      async function runTransfer(task) {
+        setTransfer(task.id, { status: 'uploading', loaded: 0, error: null });
+        let last = 0;
+        const progress = (loaded, total) => {
+          const now = Date.now();
+          if (now - last < 100 && loaded < total) return;
+          last = now;
+          setTransfer(task.id, { loaded, size: total || task.size });
+        };
+        try {
+          await uploadOne(task.sessionId, task.dir, task.source, () => {}, progress);
+          setTransfer(task.id, { status: 'done', loaded: task.size });
+          removeTransfer(task.id, 2500);
+          return true;
+        } catch (error) {
+          setTransfer(task.id, { status: 'error', error: messageOf(error) });
+          return false;
+        }
+      }
+
+      async function retryTransfer(task) {
+        if (await runTransfer(task)) {
+          notify(t('upload.retryDone', { name: task.name }), 'success');
+          reloadTrees(task.root);
+        }
+      }
+
       /** Upload items one after another into `dir` of the tree showing `root`. */
       async function uploadAll(sessionId, root, dir, sources) {
+        const tasks = sources.map((source) => ({
+          id: ++transferSeq,
+          name: source.name ?? '…',
+          size: typeof source.size === 'number' ? source.size : 0,
+          loaded: 0,
+          status: 'queued',
+          sessionId,
+          root,
+          dir,
+          source,
+          error: null,
+        }));
+        patch({ transfers: [...store.getSnapshot().transfers, ...tasks] });
         const busy = (delta) => {
           const { uploading } = store.getSnapshot();
           patch({ uploading: { ...uploading, [root]: (uploading[root] ?? 0) + delta } });
         };
-        const saved = [];
-        let failures = 0;
-        const failed = (name, error) => {
-          failures += 1;
-          notify(t('upload.failed', { name, reason: messageOf(error) }));
-        };
         busy(1);
+        let saved = 0;
+        let failures = 0;
         try {
-          for (const source of sources) {
-            try {
-              saved.push(await uploadOne(sessionId, dir, source, failed));
-            } catch (error) {
-              failed(source.name, error);
-            }
+          for (const task of tasks) {
+            if (await runTransfer(task)) saved += 1;
+            else failures += 1;
           }
         } finally {
           busy(-1);
         }
         // A failure toast stays up rather than being replaced by a success line.
-        if (failures === 0 && saved.length === 1) notify(t('upload.doneOne', { name: saved[0] }), 'success');
-        else if (failures === 0 && saved.length > 1) notify(t('upload.doneMany', { count: saved.length, dir: baseName(dir) }), 'success');
-        if (saved.length > 0) reloadTrees(root);
+        if (failures === 0 && saved === 1) notify(t('upload.doneOne', { name: tasks[0].name }), 'success');
+        else if (failures === 0 && saved > 1) notify(t('upload.doneMany', { count: saved, dir: baseName(dir) }), 'success');
+        if (saved > 0) reloadTrees(root);
       }
 
       function UploadButton(props) {
@@ -583,12 +669,25 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
         const tr = props.t ?? t;
         const buttonRef = React.useRef(null);
         const inputRef = React.useRef(null);
+        const [confirming, setConfirming] = React.useState(null);
         const busy = useSlice((s) => (s.uploading[absolutePath] ?? 0) > 0);
         // "Upload to the selected directory, else the workspace root": the last-clicked selected row counts.
         const dir = useSlice(({ selection: s }) => (s.root === absolutePath && s.anchor?.type === 'directory'
           && s.items.some((item) => item.path === s.anchor.path) ? s.anchor.path : absolutePath));
         React.useEffect(() => {
-          const el = buttonRef.current?.closest(TREE);
+          const host = buttonRef.current;
+          let el = host?.closest(TREE) ?? null;
+          // The header actions slot of DSH 0.2.2 renders outside the tree aside, so
+          // `closest` finds nothing and the tree never registers: selection, marquee,
+          // drag and the empty-space menu all stop working. Fall back to the tree in
+          // the nearest ancestor that holds the same root.
+          if (el === null && host !== null && host !== undefined) {
+            const selector = `${TREE}[data-files-root=${JSON.stringify(absolutePath)}]`;
+            for (let scope = host.parentElement; scope !== null && el === null; scope = scope.parentElement) {
+              el = scope.querySelector(selector);
+            }
+            if (el === null) el = document.querySelector(selector);
+          }
           if (el === null || el === undefined) return undefined;
           trees.set(el, { sessionId, root: absolutePath });
           return () => trees.delete(el);
@@ -608,9 +707,25 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
               'aria-label': tr('upload.label'),
               'aria-busy': busy || undefined,
               disabled: busy,
-              onClick: () => inputRef.current?.click(),
+              onClick: () => setConfirming(dir),
             }, busy ? h(ui.IconLoadingOutlineRegular) : h(UploadIcon))),
-          h('input', { ref: inputRef, type: 'file', multiple: true, hidden: true, tabIndex: -1, onChange }));
+          h('input', { ref: inputRef, type: 'file', multiple: true, hidden: true, tabIndex: -1, onChange }),
+          confirming !== null && h(ui.Modal, {
+            open: true,
+            onClose: () => setConfirming(null),
+            closeLabel: tr('dialog.close'),
+            title: tr('upload.confirmTitle'),
+            description: tr('upload.confirmTo', { dir: confirming }),
+            footer: h(React.Fragment, null,
+              h(ui.Button, { variant: 'outline', onClick: () => setConfirming(null) }, tr('dialog.cancel')),
+              h(ui.Button, {
+                variant: 'primary',
+                onClick: () => {
+                  setConfirming(null);
+                  inputRef.current?.click();
+                },
+              }, tr('upload.confirmPick'))),
+          }, h('p', { style: { margin: 0, fontSize: 13, opacity: 0.7 } }, tr('upload.confirmHint'))));
       }
 
       // ---- drag into a conversation ---------------------------------------
@@ -1050,18 +1165,26 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
         const cancelRef = React.useRef(null);
         const [error, setError] = React.useState(null);
         const [busy, setBusy] = React.useState(false);
+        // The dialog also unmounts itself: the parent store clears `dialog`, but a
+        // lost or racing store update must never leave a dead confirmation behind.
+        const [closed, setClosed] = React.useState(false);
         // Cancel takes focus, so a stray Enter never confirms a permanent delete.
         useLateFocus(cancelRef, false);
+        if (closed) return null;
         const { items } = dialog;
         const single = items.length === 1 ? items[0] : undefined;
         const close = () => {
-          if (!busy) patch({ dialog: null });
+          if (!busy) {
+            setClosed(true);
+            patch({ dialog: null });
+          }
         };
         const confirm = async () => {
           setBusy(true);
           setError(null);
           try {
             await post('delete', [['sessionId', dialog.sessionId], ...pathFields(items)]);
+            setClosed(true);
             patch({ dialog: null });
             // Counted as the dialog's title counted them: every selected item is now gone.
             notify(single === undefined ? t('delete.doneMany', { count: items.length }) : t('delete.doneOne', { name: baseName(single.path) }), 'success');
@@ -1070,8 +1193,15 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
               select(dialog.root, selection.items.filter((item) => !items.some((gone) => within(item.path, gone.path))));
             }
           } catch (failure) {
-            setError(tr('delete.failed', { reason: messageOf(failure) }));
-            setBusy(false);
+            if (failure?.code === 'not-found') {
+              // The row was stale: the item is already gone, so there is nothing to retry.
+              setClosed(true);
+              patch({ dialog: null });
+              notify(tr('delete.gone'), 'success');
+            } else {
+              setError(tr('delete.failed', { reason: messageOf(failure) }));
+              setBusy(false);
+            }
           }
           // Items before a failure are already gone, so the tree is re-listed either way.
           reloadTrees(dialog.root);
@@ -1205,6 +1335,30 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
         return actions;
       }
 
+      /** Bottom-right transfer cards: progress bar, explicit failure text, and Retry. */
+      function TransferPanel({ transfers, tr }) {
+        if (transfers.length === 0) return null;
+        return h('div', { className: 'bwfm-transfers', role: 'status' },
+          ...transfers.map((task) => {
+            const percent = task.size > 0 ? Math.min(100, Math.round((task.loaded / task.size) * 100)) : null;
+            return h('div', { key: task.id, className: 'bwfm-transfer' },
+              h('div', { className: 'bwfm-transfer-head' },
+                h('span', { className: 'bwfm-transfer-name', title: task.name }, task.name),
+                h('span', null, task.status === 'error'
+                  ? tr('upload.failedShort')
+                  : percent === null ? tr('upload.working') : `${percent}%`)),
+              h('div', { className: 'bwfm-bar' },
+                h('div', {
+                  className: 'bwfm-bar-fill',
+                  'data-error': task.status === 'error' || undefined,
+                  style: { width: task.status === 'error' ? '100%' : percent === null ? '30%' : `${percent}%` },
+                })),
+              task.status === 'error' && h('div', { className: 'bwfm-transfer-error' },
+                h('span', { title: task.error }, task.error),
+                h('button', { type: 'button', className: 'bwfm-retry', onClick: () => retryTransfer(task) }, tr('upload.retry'))));
+          }));
+      }
+
       function Overlay(props) {
         const tr = props.t ?? t;
         const selection = useSlice((s) => s.selection);
@@ -1214,6 +1368,7 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
         const menu = useSlice((s) => s.menu);
         const dialog = useSlice((s) => s.dialog);
         const toast = useSlice((s) => s.toast);
+        const transfers = useSlice((s) => s.transfers);
         const anchorRect = React.useCallback(() => new DOMRect(menu?.x ?? 0, menu?.y ?? 0, 0, 0), [menu]);
         const first = drag?.items[0];
         return h(React.Fragment, null,
@@ -1240,6 +1395,7 @@ ${TREE} [data-bwfm-upload],${TREE} [data-files-reload]~:has([data-bwfm-upload]){
           dialog?.kind === 'mkdir' && h(NewFolderDialog, { key: dialog.seq, dialog, tr }),
           dialog?.kind === 'delete' && h(DeleteDialog, { key: dialog.seq, dialog, tr }),
           dialog?.kind === 'unsaved' && h(UnsavedDialog, { key: dialog.seq, dialog, tr }),
+          h(TransferPanel, { transfers, tr }),
           toast !== null && h(ui.Toast, {
             key: toast.seq,
             text: toast.text,

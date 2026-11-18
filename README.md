@@ -4,17 +4,25 @@
   <img src="icon.svg" width="72" height="72" alt="Better Workspace File Manager icon">
 </p>
 
+> **Fork note (tyly324).** This fork of [Arrosam/dsh-better-workspace-file-manager](https://github.com/Arrosam/dsh-better-workspace-file-manager) adds:
+>
+> - **Upload target + confirmation** — the tree is registered even when the header actions render outside it (selection, marquee, drag and the empty-space menu work again), and Upload first asks which folder the files go to.
+> - **Upload progress, failure and retry** — a bottom-right panel shows a per-file progress bar; a failed file keeps its error and gets a Retry button.
+> - **Delete dialog close** — the confirmation always unmounts itself after a successful delete, and a stale row closes with a “already gone” toast instead of leaving a dead dialog.
+>
+> Install this fork: `dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager`. Released under the same MIT license as the original (see [LICENSE](LICENSE)).
+
 A file manager for the DeepSeek Harness (DSH) Web **Files** tab and the file preview panel. It adds the everyday file operations the shipped tree leaves out — upload, multi-select, download as a ZIP, new folder, delete, drag-to-move, drag-to-chat, and in-place text editing — without modifying the shipped Files tab's DOM.
 
 ## Features
 
 ### Files tab
 
-- **Upload** by button, drag-and-drop from the computer, or a dropped folder (recreated recursively, keeping both copies on a name clash).
+- **Upload** by button, drag-and-drop from the computer, or a dropped folder (recreated recursively, keeping both copies on a name clash). The button first confirms the target folder (the selected folder, else the workspace root), then shows per-file progress; failures stay visible with **Retry**.
 - **Multi-select** with click, ⌘/Ctrl-click, Shift-click, or a marquee drag over empty tree space.
 - **Download** one file, several selected items, or a whole folder as a ZIP. Archives are streamed, so large folders are not held in memory.
 - **New folder** from the right-click menu, with keep-both naming for folders created on your behalf.
-- **Delete** files and folders after a confirmation dialog. Directories are removed with everything inside them.
+- **Delete** files and folders after a confirmation dialog. Directories are removed with everything inside them. The dialog always closes after a successful delete; if the row was already gone it closes with a toast instead of keeping a dead dialog.
 - **Drag to move** rows onto a folder. A name already taken at the destination becomes `name (1).ext`, never an overwrite.
 - **Drag workspace rows into a conversation** to add `@path` chips, or image attachments for PNG/JPEG/WebP/GIF.
 
@@ -28,6 +36,15 @@ A file manager for the DeepSeek Harness (DSH) Web **Files** tab and the file pre
 
 The plugin contributes a **Text editing → Auto-save** row to the Plugins settings page. The choice is stored by the DSH Settings service, not in browser storage.
 
+## Fork changes
+
+Everything below is in this fork only, not upstream:
+
+- **Tree registration fallback** — the header actions slot renders outside `[data-files-state="tree"]` on DSH 0.2.2, so the original `closest(TREE)` registration never ran. The fork falls back to the tree in the nearest ancestor holding the same root, which restores click-selection, marquee, drag and the empty-space menu.
+- **Upload confirmation** — the Upload button opens a modal with the absolute target path and only then opens the file picker.
+- **Upload progress / retry** — uploads use `XMLHttpRequest` (the Connection Fetch route rejects a streamed request body), and a transfer panel reports `loaded/total`, keeps failures with their reason, and retries the same `File`/entry.
+- **Delete dialog** — local `closed` state so the dialog unmounts from its own handler; `not-found` closes and refreshes with a toast.
+
 ## Requirements
 
 - DSH **Web** profile, version **0.2.1-rc.3 or newer**. Verified against:
@@ -38,6 +55,16 @@ The plugin contributes a **Text editing → Auto-save** row to the Plugins setti
 - Node.js 20.15+ on the Host (the plugin uses the built-in Web Streams bridge; DSH itself may require a newer Node).
 
 ## Install
+
+This fork (recommended for the features above):
+
+```sh
+dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager
+```
+
+The upstream package (without these changes) is installed from npm:
+
+
 
 ### From the DSH Plugins page
 
