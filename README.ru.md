@@ -22,7 +22,7 @@
 ## Установка
 
 ```sh
-dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager
+dsh plugin --profile web add @tyly324/dsh-better-workspace-file-manager
 ```
 
 Требования: профиль **Web** DSH **0.2.1-rc.3 или новее** (проверено на 0.2.2-rc.1), локальная файловая система хоста (fs-local / fs-sandbox), Node.js 20.15+.

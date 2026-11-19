@@ -22,7 +22,7 @@ Un gestionnaire de fichiers pour l’onglet **Fichiers** de DSH Web et le pannea
 ## Installation
 
 ```sh
-dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager
+dsh plugin --profile web add @tyly324/dsh-better-workspace-file-manager
 ```
 
 Prérequis : profil **Web** de DSH **0.2.1-rc.3 ou supérieur** (testé avec 0.2.2-rc.1), système de fichiers local de l’hôte (fs-local / fs-sandbox) et Node.js 20.15+.

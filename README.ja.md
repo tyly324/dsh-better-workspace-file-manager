@@ -22,7 +22,7 @@ DSH Web の「ファイル」タブとプレビューで使えるファイルマ
 ## インストール
 
 ```sh
-dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager
+dsh plugin --profile web add @tyly324/dsh-better-workspace-file-manager
 ```
 
 要件：DSH Web プロファイル **0.2.1-rc.3 以降**（0.2.2-rc.1 で検証済み）、Host 側のローカルファイルシステム（fs-local / fs-sandbox）、Node.js 20.15 以降。

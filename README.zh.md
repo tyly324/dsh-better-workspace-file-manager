@@ -22,7 +22,7 @@ DSH Web「文件」标签页和文件预览面板的文件管理器，补上官�
 ## 安装
 
 ```sh
-dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager
+dsh plugin --profile web add @tyly324/dsh-better-workspace-file-manager
 ```
 
 要求：DSH Web profile **0.2.1-rc.3+**（已在 0.2.2-rc.1 验证）、Host 本地文件系统（fs-local / fs-sandbox）、Node.js 20.15+。

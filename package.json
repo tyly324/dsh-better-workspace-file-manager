@@ -1,5 +1,5 @@
 {
-  "name": "dsh-better-workspace-file-manager",
+  "name": "@tyly324/dsh-better-workspace-file-manager",
   "version": "1.4.1",
   "description": "DSH Web Files tab file manager (fork): upload confirmation + progress + retry, cut/copy/paste, rename, ZIP compress/extract, properties, new-folder button, delete dialog fix.",
   "license": "MIT",
@@ -62,5 +62,8 @@
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.4"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

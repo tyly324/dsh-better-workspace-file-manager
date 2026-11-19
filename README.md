@@ -13,7 +13,7 @@
 > - **Delete dialog close** — the confirmation always unmounts itself after a successful delete, and a stale row closes with a “already gone” toast instead of leaving a dead dialog.
 > - **Everyday file operations** — cut / copy / paste, rename, ZIP compress and extract, a Properties dialog (name, type, size or item count, modified time, mode, absolute path), and a header **New folder** button that targets the selected folder.
 >
-> Install this fork: `dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager`. Released under the same MIT license as the original (see [LICENSE](LICENSE)).
+> Install this fork: `dsh plugin --profile web add @tyly324/dsh-better-workspace-file-manager`. Released under the same MIT license as the original (see [LICENSE](LICENSE)).
 
 A file manager for the DeepSeek Harness (DSH) Web **Files** tab and the file preview panel. It adds the everyday file operations the shipped tree leaves out — upload, multi-select, download as a ZIP, new folder, delete, drag-to-move, drag-to-chat, and in-place text editing — without modifying the shipped Files tab's DOM.
 
@@ -64,7 +64,7 @@ Everything below is in this fork only, not upstream:
 This fork (recommended for the features above):
 
 ```sh
-dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager
+dsh plugin --profile web add @tyly324/dsh-better-workspace-file-manager
 ```
 
 Upstream install (without these changes):

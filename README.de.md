@@ -22,7 +22,7 @@ Ein Dateimanager für den **Dateien**-Tab von DSH Web und die Vorschau. Er ergä
 ## Installation
 
 ```sh
-dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager
+dsh plugin --profile web add @tyly324/dsh-better-workspace-file-manager
 ```
 
 Voraussetzungen: DSH-**Web**-Profil **0.2.1-rc.3 oder neuer** (getestet mit 0.2.2-rc.1), lokales Dateisystem des Hosts (fs-local / fs-sandbox) und Node.js 20.15+.

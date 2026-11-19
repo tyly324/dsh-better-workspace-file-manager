@@ -22,7 +22,7 @@ Gestor de archivos para la pestaña **Archivos** de DSH Web y el panel de vista 
 ## Instalación
 
 ```sh
-dsh plugin --profile web add github:tyly324/dsh-better-workspace-file-manager
+dsh plugin --profile web add @tyly324/dsh-better-workspace-file-manager
 ```
 
 Requisitos: perfil **Web** de DSH **0.2.1-rc.3 o superior** (probado con 0.2.2-rc.1), sistema de archivos local del Host (fs-local / fs-sandbox) y Node.js 20.15+.

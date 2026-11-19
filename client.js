@@ -42,7 +42,7 @@
  * limits the same way it does for any oversized attachment.
  */
 window.__ModuleLoader__.load({
-  id: 'dsh-better-workspace-file-manager',
+  id: '@tyly324/dsh-better-workspace-file-manager',
   factory(require) {
     const React = require('react');
     const ui = require('@deepseek-ai/dsh-client-ui-primitives');
